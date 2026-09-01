@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../domain/usecases/login_admin_usecase.dart';
 import '../../domain/usecases/register_admin_usecase.dart';
@@ -57,16 +58,53 @@ class AuthCubit extends Cubit<AuthState> {
     emit(const AuthLoading());
 
     try {
-      final admin = await _verifyOtpAdminUseCase(
-        email: email,
-        otpCode: otpCode,
-      );
+      final data = await _verifyOtpAdminUseCase(email: email, otpCode: otpCode);
 
-      emit(AuthVerifyOtpSuccess(admin as dynamic));
+      // Extract token from response
+      final token = _extractToken(data);
+
+      // Save token to SharedPreferences
+      await _saveToken(token);
+
+      emit(AuthVerifyOtpSuccess(token: token));
     } on DioException catch (error) {
       emit(AuthFailure(message: _getDioErrorMessage(error)));
     } catch (error) {
       emit(AuthFailure(message: error.toString()));
+    }
+  }
+
+  String _extractToken(Map<String, dynamic> data) {
+    // Try different token field names
+    if (data['token'] != null && data['token'].toString().trim().isNotEmpty) {
+      return data['token'].toString();
+    }
+    if (data['access_token'] != null &&
+        data['access_token'].toString().trim().isNotEmpty) {
+      return data['access_token'].toString();
+    }
+    if (data['data'] != null &&
+        data['data']['token'] != null &&
+        data['data']['token'].toString().trim().isNotEmpty) {
+      return data['data']['token'].toString();
+    }
+    if (data['data'] != null &&
+        data['data']['access_token'] != null &&
+        data['data']['access_token'].toString().trim().isNotEmpty) {
+      return data['data']['access_token'].toString();
+    }
+
+    // If no token found, return empty string
+    return '';
+  }
+
+  Future<void> _saveToken(String token) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('admin_token', token);
+    } catch (e) {
+      // Log error but don't fail the operation
+      print('Error saving token: $e');
     }
   }
 

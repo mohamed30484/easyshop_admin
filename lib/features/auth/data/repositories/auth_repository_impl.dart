@@ -49,17 +49,17 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, AdminEntity>> verifyOtpAdmin({
+  Future<Either<Failure, Map<String, dynamic>>> verifyOtpAdmin({
     required String email,
     required String otpCode,
   }) async {
     try {
-      final admin = await _remoteDataSource.verifyOtpAdmin(
+      final data = await _remoteDataSource.verifyOtpAdmin(
         email: email,
         otpCode: otpCode,
       );
 
-      return Right(admin);
+      return Right(data);
     } on DioException catch (error) {
       return Left(ServerFailure(message: _getDioErrorMessage(error)));
     } on FormatException catch (error) {

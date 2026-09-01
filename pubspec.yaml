@@ -43,6 +43,7 @@ dependencies:
   flutter_screenutil: ^5.9.3
   equatable: ^2.1.0
   dartz: ^0.10.1
+  shared_preferences: ^2.5.5
 
 dev_dependencies:
   flutter_test:

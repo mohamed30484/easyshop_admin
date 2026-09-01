@@ -36,12 +36,12 @@ class AuthLoginSuccess extends AuthState {
 }
 
 class AuthVerifyOtpSuccess extends AuthState {
-  const AuthVerifyOtpSuccess(this.admin);
+  const AuthVerifyOtpSuccess({required this.token});
 
-  final AdminModel admin;
+  final String token;
 
   @override
-  List<Object?> get props => [admin];
+  List<Object?> get props => [token];
 }
 
 class AuthOtpResendSuccess extends AuthState {

@@ -1,4 +1,3 @@
-import '../../domain/entities/admin_entity.dart';
 import '../../domain/repositories/auth_repository.dart';
 
 class VerifyOtpAdminUseCase {
@@ -6,7 +5,7 @@ class VerifyOtpAdminUseCase {
 
   final AuthRepository _repository;
 
-  Future<AdminEntity> call({
+  Future<Map<String, dynamic>> call({
     required String email,
     required String otpCode,
   }) async {
@@ -15,6 +14,6 @@ class VerifyOtpAdminUseCase {
       otpCode: otpCode,
     );
 
-    return result.fold((failure) => throw failure, (admin) => admin);
+    return result.fold((failure) => throw failure, (data) => data);
   }
 }

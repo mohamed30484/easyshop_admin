@@ -14,7 +14,7 @@ abstract class AuthRepository {
     required String password,
   });
 
-  Future<Either<Failure, AdminEntity>> verifyOtpAdmin({
+  Future<Either<Failure, Map<String, dynamic>>> verifyOtpAdmin({
     required String email,
     required String otpCode,
   });

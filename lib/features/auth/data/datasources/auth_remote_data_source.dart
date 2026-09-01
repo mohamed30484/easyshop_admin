@@ -10,7 +10,7 @@ abstract class AuthRemoteDataSource {
 
   Future<void> loginAdmin({required String email, required String password});
 
-  Future<AdminModel> verifyOtpAdmin({
+  Future<Map<String, dynamic>> verifyOtpAdmin({
     required String email,
     required String otpCode,
   });
@@ -72,7 +72,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   }
 
   @override
-  Future<AdminModel> verifyOtpAdmin({
+  Future<Map<String, dynamic>> verifyOtpAdmin({
     required String email,
     required String otpCode,
   }) async {
@@ -85,8 +85,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     final responseData = response.data;
 
     if (responseData is Map<String, dynamic>) {
-      final adminJson = _extractAdminJson(responseData);
-      return AdminModel.fromJson(adminJson);
+      return responseData;
     }
 
     throw const FormatException('Unexpected verify OTP response format.');
