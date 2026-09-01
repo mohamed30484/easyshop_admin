@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../../core/constants/app_colors.dart';
+import '../../../../home/presentation/pages/home_page.dart';
 import '../../cubit/auth_cubit.dart';
 import '../../cubit/auth_state.dart';
 
@@ -147,14 +148,13 @@ class _OtpPageState extends State<OtpPage> {
             _isVerifying = false;
           });
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Email verified successfully.'),
-              backgroundColor: AppColors.success,
-            ),
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => const HomePage()),
+            (route) => false,
           );
 
-          // الخطوة القادمة: حفظ Token والانتقال للـ Dashboard
+          return;
         }
 
         if (state is AuthOtpResendSuccess) {
@@ -172,6 +172,8 @@ class _OtpPageState extends State<OtpPage> {
               backgroundColor: AppColors.success,
             ),
           );
+
+          return;
         }
 
         if (state is AuthFailure) {
@@ -217,7 +219,7 @@ class _OtpPageState extends State<OtpPage> {
                         Container(
                           width: 84,
                           height: 84,
-                          decoration: BoxDecoration(
+                          decoration: const BoxDecoration(
                             color: AppColors.primarySoft,
                             shape: BoxShape.circle,
                           ),
