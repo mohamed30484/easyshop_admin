@@ -223,6 +223,7 @@ class _RegisterPersonalPageState extends State<RegisterPersonalPage> {
 
 class AppTextField extends StatelessWidget {
   const AppTextField({
+    super.key,
     required this.label,
     required this.hint,
     required this.controller,

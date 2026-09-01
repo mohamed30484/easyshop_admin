@@ -1,8 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../../core/constants/app_colors.dart';
+import '../../cubit/auth_cubit.dart';
+import '../../cubit/auth_state.dart';
 
 class OtpPage extends StatefulWidget {
   const OtpPage({super.key, required this.email});
@@ -115,21 +118,10 @@ class _OtpPageState extends State<OtpPage> {
       _isVerifying = true;
     });
 
-    // مؤقتًا فقط: في الخطوة القادمة نربطه بـ AuthCubit.
-    Future.delayed(const Duration(milliseconds: 800), () {
-      if (!mounted) return;
-
-      setState(() {
-        _isVerifying = false;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('OTP verified successfully.'),
-          backgroundColor: AppColors.success,
-        ),
-      );
-    });
+    context.read<AuthCubit>().verifyOtpAdmin(
+      email: widget.email,
+      otpCode: _otpCode,
+    );
   }
 
   void _resendOtp() {
@@ -141,223 +133,257 @@ class _OtpPageState extends State<OtpPage> {
       _isResending = true;
     });
 
-    // مؤقتًا فقط: في الخطوة القادمة نربطه بـ AuthCubit.
-    Future.delayed(const Duration(milliseconds: 600), () {
-      if (!mounted) return;
-
-      setState(() {
-        _isResending = false;
-      });
-
-      _startResendTimer();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('A new OTP code was sent to your email.'),
-          backgroundColor: AppColors.success,
-        ),
-      );
-    });
+    context.read<AuthCubit>().resendOtpAdmin(email: widget.email);
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Verify Email'),
-        leading: IconButton(
-          onPressed: _isVerifying ? null : () => Navigator.of(context).pop(),
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-        ),
-      ),
-      body: SafeArea(
-        top: false,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final maxContentWidth = constraints.maxWidth >= 600
-                ? 460.0
-                : double.infinity;
+    return BlocListener<AuthCubit, AuthState>(
+      listener: (context, state) {
+        if (state is AuthVerifyOtpSuccess) {
+          if (!mounted) return;
 
-            return Center(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: maxContentWidth),
-                child: SingleChildScrollView(
-                  keyboardDismissBehavior:
-                      ScrollViewKeyboardDismissBehavior.onDrag,
-                  padding: const EdgeInsets.fromLTRB(24, 38, 24, 32),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 84,
-                        height: 84,
-                        decoration: BoxDecoration(
-                          color: AppColors.primarySoft,
-                          shape: BoxShape.circle,
+          setState(() {
+            _isVerifying = false;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Email verified successfully.'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+
+          // الخطوة القادمة: حفظ Token والانتقال للـ Dashboard
+        }
+
+        if (state is AuthOtpResendSuccess) {
+          if (!mounted) return;
+
+          setState(() {
+            _isResending = false;
+          });
+
+          _startResendTimer();
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('A new OTP code was sent to your email.'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+
+        if (state is AuthFailure) {
+          if (!mounted) return;
+
+          setState(() {
+            _isVerifying = false;
+            _isResending = false;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+          );
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          title: const Text('Verify Email'),
+          leading: IconButton(
+            onPressed: _isVerifying ? null : () => Navigator.of(context).pop(),
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+          ),
+        ),
+        body: SafeArea(
+          top: false,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final maxContentWidth = constraints.maxWidth >= 600
+                  ? 460.0
+                  : double.infinity;
+
+              return Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: maxContentWidth),
+                  child: SingleChildScrollView(
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    padding: const EdgeInsets.fromLTRB(24, 38, 24, 32),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 84,
+                          height: 84,
+                          decoration: BoxDecoration(
+                            color: AppColors.primarySoft,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.mark_email_unread_outlined,
+                            color: AppColors.primary,
+                            size: 38,
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.mark_email_unread_outlined,
-                          color: AppColors.primary,
-                          size: 38,
+                        const SizedBox(height: 26),
+                        const Text(
+                          'Verify your email',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 25,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.45,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 26),
-                      const Text(
-                        'Verify your email',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 25,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.45,
+                        const SizedBox(height: 10),
+                        const Text(
+                          'We sent a 6-digit verification code to',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 15,
+                            height: 1.4,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 10),
-                      const Text(
-                        'We sent a 6-digit verification code to',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 15,
-                          height: 1.4,
+                        const SizedBox(height: 4),
+                        Text(
+                          widget.email,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        widget.email,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 38),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: List.generate(6, (index) {
-                          return SizedBox(
-                            width: 46,
-                            height: 56,
-                            child: TextField(
-                              controller: _controllers[index],
-                              focusNode: _focusNodes[index],
-                              keyboardType: TextInputType.number,
-                              textAlign: TextAlign.center,
-                              maxLength: 1,
-                              enabled: !_isVerifying,
-                              style: const TextStyle(
-                                color: AppColors.textPrimary,
-                                fontSize: 22,
-                                fontWeight: FontWeight.w700,
-                              ),
-                              decoration: InputDecoration(
-                                counterText: '',
-                                contentPadding: EdgeInsets.zero,
-                                filled: true,
-                                fillColor: AppColors.inputBackground,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                  borderSide: BorderSide.none,
+                        const SizedBox(height: 38),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: List.generate(6, (index) {
+                            return SizedBox(
+                              width: 46,
+                              height: 56,
+                              child: TextField(
+                                controller: _controllers[index],
+                                focusNode: _focusNodes[index],
+                                keyboardType: TextInputType.number,
+                                textAlign: TextAlign.center,
+                                maxLength: 1,
+                                enabled: !_isVerifying,
+                                style: const TextStyle(
+                                  color: AppColors.textPrimary,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w700,
                                 ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                  borderSide: BorderSide.none,
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                  borderSide: const BorderSide(
-                                    color: AppColors.primary,
-                                    width: 1.5,
+                                decoration: InputDecoration(
+                                  counterText: '',
+                                  contentPadding: EdgeInsets.zero,
+                                  filled: true,
+                                  fillColor: AppColors.inputBackground,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: const BorderSide(
+                                      color: AppColors.primary,
+                                      width: 1.5,
+                                    ),
                                   ),
                                 ),
+                                onChanged: (value) {
+                                  _onOtpChanged(value, index);
+                                },
                               ),
-                              onChanged: (value) {
-                                _onOtpChanged(value, index);
-                              },
+                            );
+                          }),
+                        ),
+                        const SizedBox(height: 32),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 54,
+                          child: ElevatedButton(
+                            onPressed: _isOtpComplete && !_isVerifying
+                                ? _verifyOtp
+                                : null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              disabledBackgroundColor: AppColors.primaryLight,
+                              foregroundColor: Colors.white,
+                              disabledForegroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
                             ),
-                          );
-                        }),
-                      ),
-                      const SizedBox(height: 32),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 54,
-                        child: ElevatedButton(
-                          onPressed: _isOtpComplete && !_isVerifying
-                              ? _verifyOtp
-                              : null,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            disabledBackgroundColor: AppColors.primaryLight,
-                            foregroundColor: Colors.white,
-                            disabledForegroundColor: Colors.white,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
+                            child: _isVerifying
+                                ? const SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.4,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Verify Code',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
                           ),
-                          child: _isVerifying
+                        ),
+                        const SizedBox(height: 24),
+                        Text(
+                          _secondsLeft > 0
+                              ? 'Resend code in $_secondsLeft seconds'
+                              : 'Did not receive the code?',
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        TextButton(
+                          onPressed: _secondsLeft == 0 && !_isResending
+                              ? _resendOtp
+                              : null,
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.primary,
+                            disabledForegroundColor: AppColors.textSecondary,
+                          ),
+                          child: _isResending
                               ? const SizedBox(
-                                  width: 22,
-                                  height: 22,
+                                  width: 18,
+                                  height: 18,
                                   child: CircularProgressIndicator(
-                                    strokeWidth: 2.4,
-                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                    color: AppColors.primary,
                                   ),
                                 )
                               : const Text(
-                                  'Verify Code',
+                                  'Resend code',
                                   style: TextStyle(
-                                    fontSize: 16,
+                                    fontSize: 14,
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),
                         ),
-                      ),
-                      const SizedBox(height: 24),
-                      Text(
-                        _secondsLeft > 0
-                            ? 'Resend code in $_secondsLeft seconds'
-                            : 'Did not receive the code?',
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      TextButton(
-                        onPressed: _secondsLeft == 0 && !_isResending
-                            ? _resendOtp
-                            : null,
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppColors.primary,
-                          disabledForegroundColor: AppColors.textSecondary,
-                        ),
-                        child: _isResending
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: AppColors.primary,
-                                ),
-                              )
-                            : const Text(
-                                'Resend code',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
     );

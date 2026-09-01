@@ -9,6 +9,13 @@ abstract class AuthRemoteDataSource {
   Future<AdminModel> registerAdmin(AdminRegistrationData registrationData);
 
   Future<void> loginAdmin({required String email, required String password});
+
+  Future<AdminModel> verifyOtpAdmin({
+    required String email,
+    required String otpCode,
+  });
+
+  Future<void> resendOtpAdmin({required String email});
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -46,7 +53,6 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
     if (responseData is Map<String, dynamic>) {
       final adminJson = _extractAdminJson(responseData);
-
       return AdminModel.fromJson(adminJson);
     }
 
@@ -61,6 +67,36 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     await _apiClient.dio.post(
       ApiConstants.adminLogin,
       data: {'email': email, 'password': password},
+      options: Options(contentType: Headers.jsonContentType),
+    );
+  }
+
+  @override
+  Future<AdminModel> verifyOtpAdmin({
+    required String email,
+    required String otpCode,
+  }) async {
+    final response = await _apiClient.dio.post(
+      ApiConstants.adminOtpVerify,
+      data: {'email': email, 'otp_code': otpCode},
+      options: Options(contentType: Headers.jsonContentType),
+    );
+
+    final responseData = response.data;
+
+    if (responseData is Map<String, dynamic>) {
+      final adminJson = _extractAdminJson(responseData);
+      return AdminModel.fromJson(adminJson);
+    }
+
+    throw const FormatException('Unexpected verify OTP response format.');
+  }
+
+  @override
+  Future<void> resendOtpAdmin({required String email}) async {
+    await _apiClient.dio.post(
+      ApiConstants.adminOtpResend,
+      data: {'email': email},
       options: Options(contentType: Headers.jsonContentType),
     );
   }

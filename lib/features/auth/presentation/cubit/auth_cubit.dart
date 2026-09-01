@@ -3,27 +3,34 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../domain/usecases/login_admin_usecase.dart';
 import '../../domain/usecases/register_admin_usecase.dart';
+import '../../domain/usecases/verify_otp_admin_usecase.dart';
+import '../../domain/usecases/resend_otp_admin_usecase.dart';
 import '../models/admin_registration_data.dart';
 import 'auth_state.dart';
 
 class AuthCubit extends Cubit<AuthState> {
-  AuthCubit(this._registerAdminUseCase, this._loginAdminUseCase)
-    : super(const AuthInitial());
+  AuthCubit(
+    this._registerAdminUseCase,
+    this._loginAdminUseCase,
+    this._verifyOtpAdminUseCase,
+    this._resendOtpAdminUseCase,
+  ) : super(const AuthInitial());
 
   final RegisterAdminUseCase _registerAdminUseCase;
   final LoginAdminUseCase _loginAdminUseCase;
+  final VerifyOtpAdminUseCase _verifyOtpAdminUseCase;
+  final ResendOtpAdminUseCase _resendOtpAdminUseCase;
 
   Future<void> registerAdmin(AdminRegistrationData registrationData) async {
     emit(const AuthLoading());
 
     try {
       final admin = await _registerAdminUseCase(registrationData);
-
-      emit(AuthRegisterSuccess(admin));
+      emit(AuthRegisterSuccess(admin as dynamic));
     } on DioException catch (error) {
-      emit(AuthFailure(_getDioErrorMessage(error)));
+      emit(AuthFailure(message: _getDioErrorMessage(error)));
     } catch (error) {
-      emit(AuthFailure(error.toString()));
+      emit(AuthFailure(message: error.toString()));
     }
   }
 
@@ -35,12 +42,44 @@ class AuthCubit extends Cubit<AuthState> {
 
     try {
       await _loginAdminUseCase(email: email, password: password);
-
       emit(AuthLoginSuccess(email: email));
     } on DioException catch (error) {
-      emit(AuthFailure(_getDioErrorMessage(error)));
+      emit(AuthFailure(message: _getDioErrorMessage(error)));
     } catch (error) {
-      emit(AuthFailure(error.toString()));
+      emit(AuthFailure(message: error.toString()));
+    }
+  }
+
+  Future<void> verifyOtpAdmin({
+    required String email,
+    required String otpCode,
+  }) async {
+    emit(const AuthLoading());
+
+    try {
+      final admin = await _verifyOtpAdminUseCase(
+        email: email,
+        otpCode: otpCode,
+      );
+
+      emit(AuthVerifyOtpSuccess(admin as dynamic));
+    } on DioException catch (error) {
+      emit(AuthFailure(message: _getDioErrorMessage(error)));
+    } catch (error) {
+      emit(AuthFailure(message: error.toString()));
+    }
+  }
+
+  Future<void> resendOtpAdmin({required String email}) async {
+    emit(const AuthLoading());
+
+    try {
+      await _resendOtpAdminUseCase(email: email);
+      emit(const AuthOtpResendSuccess());
+    } on DioException catch (error) {
+      emit(AuthFailure(message: _getDioErrorMessage(error)));
+    } catch (error) {
+      emit(AuthFailure(message: error.toString()));
     }
   }
 
