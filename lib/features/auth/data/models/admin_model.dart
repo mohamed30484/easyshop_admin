@@ -18,18 +18,35 @@ class AdminModel extends AdminEntity {
 
   factory AdminModel.fromJson(Map<String, dynamic> json) {
     return AdminModel(
-      id: json['id'] as int,
-      name: json['name'] as String,
-      email: json['email'] as String,
-      phone: json['phone'] as String,
-      nationalId: json['national_id'] as String,
-      businessName: json['business_name'] as String,
-      address: json['address'] as String?,
-      latitude: json['latitude'] as double?,
-      longitude: json['longitude'] as double?,
-      commercialRegister: json['commercial_register'] as String?,
-      taxCard: json['tax_card'] as String?,
-      picture: json['picture'] as String?,
+      id: (json['id'] as num).toInt(),
+      name: json['name']?.toString() ?? '',
+      email: json['email']?.toString() ?? '',
+      phone: json['phone']?.toString() ?? '',
+      nationalId: json['national_id']?.toString() ?? '',
+      businessName: json['business_name']?.toString() ?? '',
+      address: json['address']?.toString(),
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
+      commercialRegister: json['commercial_register']?.toString(),
+      taxCard: json['tax_card']?.toString(),
+      picture: json['picture']?.toString(),
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'email': email,
+      'phone': phone,
+      'national_id': nationalId,
+      'business_name': businessName,
+      'address': address,
+      'latitude': latitude,
+      'longitude': longitude,
+      'commercial_register': commercialRegister,
+      'tax_card': taxCard,
+      'picture': picture,
+    };
   }
 }

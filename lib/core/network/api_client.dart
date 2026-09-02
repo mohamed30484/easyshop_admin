@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../constants/api_constants.dart';
+import 'interceptors/admin_token_interceptor.dart';
 
 class ApiClient {
   ApiClient()
@@ -15,7 +16,9 @@ class ApiClient {
             'x-api-key': ApiConstants.apiKey,
           },
         ),
-      );
+      ) {
+    dio.interceptors.add(AdminTokenInterceptor());
+  }
 
   final Dio dio;
 }

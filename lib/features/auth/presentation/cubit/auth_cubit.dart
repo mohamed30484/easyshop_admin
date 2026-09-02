@@ -2,10 +2,12 @@ import 'package:dio/dio.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../../core/services/admin_profile_storage.dart';
+import '../../data/models/admin_model.dart';
 import '../../domain/usecases/login_admin_usecase.dart';
 import '../../domain/usecases/register_admin_usecase.dart';
-import '../../domain/usecases/verify_otp_admin_usecase.dart';
 import '../../domain/usecases/resend_otp_admin_usecase.dart';
+import '../../domain/usecases/verify_otp_admin_usecase.dart';
 import '../models/admin_registration_data.dart';
 import 'auth_state.dart';
 
@@ -21,6 +23,8 @@ class AuthCubit extends Cubit<AuthState> {
   final LoginAdminUseCase _loginAdminUseCase;
   final VerifyOtpAdminUseCase _verifyOtpAdminUseCase;
   final ResendOtpAdminUseCase _resendOtpAdminUseCase;
+
+  final AdminProfileStorage _profileStorage = AdminProfileStorage();
 
   Future<void> registerAdmin(AdminRegistrationData registrationData) async {
     emit(const AuthLoading());
@@ -43,6 +47,7 @@ class AuthCubit extends Cubit<AuthState> {
 
     try {
       await _loginAdminUseCase(email: email, password: password);
+
       emit(AuthLoginSuccess(email: email));
     } on DioException catch (error) {
       emit(AuthFailure(message: _getDioErrorMessage(error)));
@@ -58,53 +63,84 @@ class AuthCubit extends Cubit<AuthState> {
     emit(const AuthLoading());
 
     try {
-      final data = await _verifyOtpAdminUseCase(email: email, otpCode: otpCode);
+      final response = await _verifyOtpAdminUseCase(
+        email: email,
+        otpCode: otpCode,
+      );
 
-      // Extract token from response
-      final token = _extractToken(data);
+      final token = _extractToken(response);
+      final admin = _extractAdmin(response);
 
-      // Save token to SharedPreferences
       await _saveToken(token);
+      await _profileStorage.save(admin);
 
       emit(AuthVerifyOtpSuccess(token: token));
     } on DioException catch (error) {
       emit(AuthFailure(message: _getDioErrorMessage(error)));
+    } on FormatException catch (error) {
+      emit(AuthFailure(message: error.message));
     } catch (error) {
       emit(AuthFailure(message: error.toString()));
     }
   }
 
-  String _extractToken(Map<String, dynamic> data) {
-    // Try different token field names
-    if (data['token'] != null && data['token'].toString().trim().isNotEmpty) {
-      return data['token'].toString();
-    }
-    if (data['access_token'] != null &&
-        data['access_token'].toString().trim().isNotEmpty) {
-      return data['access_token'].toString();
-    }
-    if (data['data'] != null &&
-        data['data']['token'] != null &&
-        data['data']['token'].toString().trim().isNotEmpty) {
-      return data['data']['token'].toString();
-    }
-    if (data['data'] != null &&
-        data['data']['access_token'] != null &&
-        data['data']['access_token'].toString().trim().isNotEmpty) {
-      return data['data']['access_token'].toString();
+  AdminModel _extractAdmin(Map<String, dynamic> response) {
+    final data = response['data'];
+
+    if (data is Map<String, dynamic>) {
+      final user = data['user'];
+
+      if (user is Map<String, dynamic>) {
+        return AdminModel.fromJson(user);
+      }
+
+      return AdminModel.fromJson(data);
     }
 
-    // If no token found, return empty string
-    return '';
+    final user = response['user'];
+
+    if (user is Map<String, dynamic>) {
+      return AdminModel.fromJson(user);
+    }
+
+    return AdminModel.fromJson(response);
+  }
+
+  String _extractToken(Map<String, dynamic> response) {
+    final data = response['data'];
+
+    if (data is Map<String, dynamic>) {
+      final token = data['token'] ?? data['access_token'];
+
+      if (token != null && token.toString().trim().isNotEmpty) {
+        return token.toString().trim();
+      }
+    }
+
+    final token = response['token'] ?? response['access_token'];
+
+    if (token != null && token.toString().trim().isNotEmpty) {
+      return token.toString().trim();
+    }
+
+    throw const FormatException(
+      'Token was not found in the verify OTP response.',
+    );
   }
 
   Future<void> _saveToken(String token) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('admin_token', token);
-    } catch (e) {
-      // Log error but don't fail the operation
-      print('Error saving token: $e');
+    final prefs = await SharedPreferences.getInstance();
+
+    final saved = await prefs.setString('admin_token', token);
+
+    if (!saved) {
+      throw Exception('Failed to save admin token.');
+    }
+
+    final storedToken = prefs.getString('admin_token');
+
+    if (storedToken == null || storedToken.trim().isEmpty) {
+      throw Exception('Admin token was not saved correctly.');
     }
   }
 
@@ -127,7 +163,7 @@ class AuthCubit extends Cubit<AuthState> {
     if (data is Map<String, dynamic>) {
       final message = data['message'];
 
-      if (message != null) {
+      if (message != null && message.toString().trim().isNotEmpty) {
         return message.toString();
       }
 
@@ -144,7 +180,9 @@ class AuthCubit extends Cubit<AuthState> {
       }
     }
 
-    if (error.type == DioExceptionType.connectionTimeout) {
+    if (error.type == DioExceptionType.connectionTimeout ||
+        error.type == DioExceptionType.receiveTimeout ||
+        error.type == DioExceptionType.sendTimeout) {
       return 'Connection timed out. Please try again.';
     }
 

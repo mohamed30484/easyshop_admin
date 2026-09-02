@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/services/admin_profile_storage.dart';
+import '../../../auth/data/models/admin_model.dart';
+import 'package:easyshop_admin/features/products/presentation/pages/products_page.dart';
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -9,11 +13,57 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
+  AdminModel? _admin;
+  bool _isLoadingProfile = true;
 
   static const orange = Color(0xFFFF821D);
   static const dark = Color(0xFF20212B);
   static const grey = Color(0xFF92939D);
   static const pageBackground = Color(0xFFF7F8FA);
+
+  final AdminProfileStorage _profileStorage = AdminProfileStorage();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAdminProfile();
+  }
+
+  Future<void> _loadAdminProfile() async {
+    final admin = await _profileStorage.get();
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _admin = admin;
+      _isLoadingProfile = false;
+    });
+  }
+
+  void _onBottomNavigationChanged(int index) {
+    if (index == 0) {
+      setState(() {
+        _selectedIndex = 0;
+      });
+
+      return;
+    }
+
+    if (index == 1) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const ProductsPage()),
+      );
+
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('This page will be available soon.')),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +75,7 @@ class _HomePageState extends State<HomePage> {
           children: [
             Column(
               children: [
-                const _Header(),
+                _Header(admin: _admin, isLoading: _isLoadingProfile),
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 92),
@@ -89,9 +139,7 @@ class _HomePageState extends State<HomePage> {
               bottom: 0,
               child: _BottomBar(
                 selectedIndex: _selectedIndex,
-                onChanged: (index) {
-                  setState(() => _selectedIndex = index);
-                },
+                onChanged: _onBottomNavigationChanged,
               ),
             ),
           ],
@@ -102,7 +150,49 @@ class _HomePageState extends State<HomePage> {
 }
 
 class _Header extends StatelessWidget {
-  const _Header();
+  const _Header({required this.admin, required this.isLoading});
+
+  final AdminModel? admin;
+  final bool isLoading;
+
+  String get _adminName {
+    final name = admin?.name.trim() ?? '';
+
+    if (name.isEmpty) {
+      return 'Admin';
+    }
+
+    return name;
+  }
+
+  String get _businessName {
+    final businessName = admin?.businessName.trim() ?? '';
+
+    if (businessName.isEmpty) {
+      return 'My Store';
+    }
+
+    return businessName;
+  }
+
+  String get _initials {
+    final nameParts = _adminName
+        .split(RegExp(r'\s+'))
+        .where((part) => part.isNotEmpty)
+        .toList();
+
+    if (nameParts.isEmpty) {
+      return 'A';
+    }
+
+    if (nameParts.length == 1) {
+      return nameParts.first.substring(0, 1).toUpperCase();
+    }
+
+    return '${nameParts.first.substring(0, 1)}'
+            '${nameParts.last.substring(0, 1)}'
+        .toUpperCase();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -117,68 +207,189 @@ class _Header extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white,
-              border: Border.all(
-                color: Colors.white.withOpacity(.65),
-                width: 2,
-              ),
-            ),
-            child: const Icon(
-              Icons.person_rounded,
-              color: Color(0xFFB88963),
-              size: 29,
-            ),
+          _ProfileAvatar(
+            imageUrl: admin?.picture,
+            initials: _initials,
+            isLoading: isLoading,
           ),
           const SizedBox(width: 12),
-          const Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Good morning,',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
+          Expanded(
+            child: isLoading
+                ? const _HeaderLoadingText()
+                : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Good morning,',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _adminName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _businessName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                SizedBox(height: 2),
-                Text(
-                  'Ahmed Khalil',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                SizedBox(height: 2),
-                Text(
-                  'Khalil Digital Store',
-                  style: TextStyle(color: Colors.white70, fontSize: 12),
-                ),
-              ],
-            ),
           ),
           Container(
             width: 43,
             height: 43,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(.18),
+              color: Colors.white.withValues(alpha: 0.18),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
-              Icons.notifications_none_rounded,
-              color: Colors.white,
-              size: 23,
+            child: IconButton(
+              onPressed: () {},
+              icon: const Icon(
+                Icons.notifications_none_rounded,
+                color: Colors.white,
+                size: 23,
+              ),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _HeaderLoadingText extends StatelessWidget {
+  const _HeaderLoadingText();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Good morning,',
+          style: TextStyle(
+            color: Colors.white70,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        SizedBox(height: 5),
+        _HeaderSkeleton(width: 120),
+        SizedBox(height: 6),
+        _HeaderSkeleton(width: 155),
+      ],
+    );
+  }
+}
+
+class _HeaderSkeleton extends StatelessWidget {
+  const _HeaderSkeleton({required this.width});
+
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: 11,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.24),
+        borderRadius: BorderRadius.circular(8),
+      ),
+    );
+  }
+}
+
+class _ProfileAvatar extends StatelessWidget {
+  const _ProfileAvatar({
+    required this.imageUrl,
+    required this.initials,
+    required this.isLoading,
+  });
+
+  final String? imageUrl;
+  final String initials;
+  final bool isLoading;
+
+  bool get _hasValidImage {
+    return imageUrl != null &&
+        imageUrl!.trim().isNotEmpty &&
+        Uri.tryParse(imageUrl!)?.hasAbsolutePath == true;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white,
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.65),
+          width: 2,
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: isLoading
+          ? const Center(
+              child: SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: _HomePageState.orange,
+                ),
+              ),
+            )
+          : _hasValidImage
+          ? Image.network(
+              imageUrl!,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return _InitialsAvatar(initials: initials);
+              },
+            )
+          : _InitialsAvatar(initials: initials),
+    );
+  }
+}
+
+class _InitialsAvatar extends StatelessWidget {
+  const _InitialsAvatar({required this.initials});
+
+  final String initials;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: const Color(0xFFFFE0C9),
+      alignment: Alignment.center,
+      child: Text(
+        initials,
+        style: const TextStyle(
+          color: _HomePageState.orange,
+          fontSize: 16,
+          fontWeight: FontWeight.w800,
+        ),
       ),
     );
   }
@@ -197,7 +408,7 @@ class _StatsCard extends StatelessWidget {
         border: Border.all(color: const Color(0xFFE5E5E5)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
@@ -336,9 +547,9 @@ class _SectionTitle extends StatelessWidget {
         if (action != null)
           GestureDetector(
             onTap: onAction,
-            child: const Text(
-              'See all',
-              style: TextStyle(
+            child: Text(
+              action!,
+              style: const TextStyle(
                 color: _HomePageState.orange,
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
@@ -617,7 +828,7 @@ class _BottomBar extends StatelessWidget {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 14,
             offset: const Offset(0, -4),
           ),
