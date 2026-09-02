@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../app/injection_container.dart';
+import '../../../home/presentation/pages/home_page.dart';
 import '../../domain/entities/product_entity.dart';
 import '../cubit/products_cubit.dart';
 import '../cubit/products_state.dart';
@@ -28,6 +29,7 @@ class _ProductsView extends StatefulWidget {
 class _ProductsViewState extends State<_ProductsView> {
   final _searchController = TextEditingController();
   String _query = '';
+  int _selectedIndex = 1;
 
   static const orange = Color(0xFFFF821D);
   static const dark = Color(0xFF20212B);
@@ -48,6 +50,26 @@ class _ProductsViewState extends State<_ProductsView> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _onBottomNavigationChanged(int index) {
+    if (index == 0) {
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const HomePage()));
+      return;
+    }
+
+    if (index == 1) {
+      setState(() {
+        _selectedIndex = 1;
+      });
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('This page will be available soon.')),
+    );
   }
 
   List<ProductEntity> _filterProducts(List<ProductEntity> products) {
@@ -151,7 +173,7 @@ class _ProductsViewState extends State<_ProductsView> {
                         await context.read<ProductsCubit>().getProducts();
                       },
                       child: ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 88),
                         itemCount: products.length,
                         separatorBuilder: (_, _) => const SizedBox(height: 11),
                         itemBuilder: (_, index) {
@@ -167,6 +189,10 @@ class _ProductsViewState extends State<_ProductsView> {
             ),
           ],
         ),
+      ),
+      bottomNavigationBar: _BottomBar(
+        selectedIndex: _selectedIndex,
+        onChanged: _onBottomNavigationChanged,
       ),
     );
   }
@@ -462,6 +488,82 @@ class _ErrorView extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _BottomBar extends StatelessWidget {
+  const _BottomBar({required this.selectedIndex, required this.onChanged});
+
+  final int selectedIndex;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    const items = [
+      (Icons.home_outlined, Icons.home_rounded, 'Home'),
+      (Icons.inventory_2_outlined, Icons.inventory_2_rounded, 'Products'),
+      (Icons.shopping_bag_outlined, Icons.shopping_bag_rounded, 'Orders'),
+      (Icons.person_outline_rounded, Icons.person_rounded, 'Profile'),
+    ];
+
+    return Container(
+      height: 76,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 14,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: List.generate(items.length, (index) {
+          final item = items[index];
+          final selected = selectedIndex == index;
+
+          return Expanded(
+            child: InkWell(
+              onTap: () => onChanged(index),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    selected ? item.$2 : item.$1,
+                    color: selected
+                        ? _ProductsViewState.orange
+                        : const Color(0xFF9699A5),
+                    size: 23,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    item.$3,
+                    style: TextStyle(
+                      color: selected
+                          ? _ProductsViewState.orange
+                          : const Color(0xFF9699A5),
+                      fontSize: 11,
+                      fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    width: selected ? 28 : 0,
+                    height: 2,
+                    decoration: BoxDecoration(
+                      color: _ProductsViewState.orange,
+                      borderRadius: BorderRadius.circular(5),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }),
       ),
     );
   }
