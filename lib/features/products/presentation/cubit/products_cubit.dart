@@ -1,13 +1,16 @@
-import 'package:dio/dio.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../domain/usecases/create_product_params.dart';
+import '../../domain/usecases/create_product_usecase.dart';
 import '../../domain/usecases/get_products_usecase.dart';
 import 'products_state.dart';
 
 class ProductsCubit extends Cubit<ProductsState> {
-  ProductsCubit(this._getProductsUseCase) : super(const ProductsInitial());
+  ProductsCubit(this._getProductsUseCase, this._createProductUseCase)
+    : super(const ProductsInitial());
 
   final GetProductsUseCase _getProductsUseCase;
+  final CreateProductUseCase _createProductUseCase;
 
   Future<void> getProducts() async {
     emit(const ProductsLoading());
@@ -16,17 +19,31 @@ class ProductsCubit extends Cubit<ProductsState> {
       final products = await _getProductsUseCase();
 
       emit(ProductsLoaded(products));
-    } on DioException catch (error) {
-      emit(
-        ProductsFailure(
-          error.response?.data is Map<String, dynamic>
-              ? (error.response?.data['message']?.toString() ??
-                    'Failed to load products.')
-              : 'Failed to load products.',
-        ),
-      );
     } catch (error) {
-      emit(ProductsFailure(error.toString()));
+      emit(ProductsFailure(_errorMessage(error)));
     }
+  }
+
+  Future<void> createProduct(CreateProductParams params) async {
+    emit(const ProductCreating());
+
+    try {
+      final product = await _createProductUseCase(params);
+
+      emit(ProductCreated(product));
+    } catch (error) {
+      emit(ProductCreateFailure(_errorMessage(error)));
+    }
+  }
+
+  String _errorMessage(Object error) {
+    final message = error.toString();
+
+    const failurePrefix = 'ServerFailure(message: ';
+    if (message.startsWith(failurePrefix) && message.endsWith(')')) {
+      return message.substring(failurePrefix.length, message.length - 1).trim();
+    }
+
+    return message.replaceFirst('Exception: ', '').trim();
   }
 }

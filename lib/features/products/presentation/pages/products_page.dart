@@ -6,6 +6,7 @@ import '../../../home/presentation/pages/home_page.dart';
 import '../../domain/entities/product_entity.dart';
 import '../cubit/products_cubit.dart';
 import '../cubit/products_state.dart';
+import 'add_product_page.dart';
 
 class ProductsPage extends StatelessWidget {
   const ProductsPage({super.key});
@@ -39,6 +40,7 @@ class _ProductsViewState extends State<_ProductsView> {
   @override
   void initState() {
     super.initState();
+
     _searchController.addListener(() {
       setState(() {
         _query = _searchController.text.trim().toLowerCase();
@@ -50,6 +52,18 @@ class _ProductsViewState extends State<_ProductsView> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _openAddProductPage() async {
+    final created = await Navigator.of(
+      context,
+    ).push<bool>(MaterialPageRoute(builder: (_) => const AddProductPage()));
+
+    if (!mounted || created != true) {
+      return;
+    }
+
+    await context.read<ProductsCubit>().getProducts();
   }
 
   void _onBottomNavigationChanged(int index) {
@@ -73,7 +87,9 @@ class _ProductsViewState extends State<_ProductsView> {
   }
 
   List<ProductEntity> _filterProducts(List<ProductEntity> products) {
-    if (_query.isEmpty) return products;
+    if (_query.isEmpty) {
+      return products;
+    }
 
     return products.where((product) {
       return product.name.toLowerCase().contains(_query) ||
@@ -88,7 +104,7 @@ class _ProductsViewState extends State<_ProductsView> {
       body: SafeArea(
         child: Column(
           children: [
-            _ProductsHeader(onAdd: () {}),
+            _ProductsHeader(onAdd: _openAddProductPage),
             const SizedBox(height: 12),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -372,6 +388,7 @@ class _VisibilityBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = visible ? const Color(0xFF13A978) : const Color(0xFF9699A5);
+
     final background = visible
         ? const Color(0xFFEAFBF4)
         : const Color(0xFFF0F1F4);
