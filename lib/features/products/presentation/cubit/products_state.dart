@@ -56,3 +56,42 @@ class ProductCreateFailure extends ProductsState {
   @override
   List<Object?> get props => [message];
 }
+
+class ProductUpdating extends ProductsState {
+  const ProductUpdating();
+}
+
+class ProductUpdated extends ProductsState {
+  const ProductUpdated(this.product);
+
+  final ProductEntity product;
+
+  @override
+  List<Object?> get props => [product];
+}
+
+class ProductUpdateFailure extends ProductsState {
+  const ProductUpdateFailure(this.message);
+
+  final String message;
+
+  @override
+  List<Object?> get props => [message];
+}
+
+class ProductDeleting extends ProductsState {
+  const ProductDeleting();
+}
+
+class ProductDeleted extends ProductsState {
+  const ProductDeleted();
+}
+
+class ProductDeleteFailure extends ProductsState {
+  const ProductDeleteFailure(this.message);
+
+  final String message;
+
+  @override
+  List<Object?> get props => [message];
+}

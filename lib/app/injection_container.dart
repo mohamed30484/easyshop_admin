@@ -21,7 +21,9 @@ import '../features/products/data/datasources/products_remote_data_source.dart';
 import '../features/products/data/repositories/products_repository_impl.dart';
 import '../features/products/domain/repositories/products_repository.dart';
 import '../features/products/domain/usecases/create_product_usecase.dart';
+import '../features/products/domain/usecases/delete_product_usecase.dart';
 import '../features/products/domain/usecases/get_products_usecase.dart';
+import '../features/products/domain/usecases/update_product_usecase.dart';
 import '../features/products/presentation/cubit/products_cubit.dart';
 
 final sl = GetIt.instance;
@@ -84,9 +86,22 @@ Future<void> setupDependencies() async {
     () => CreateProductUseCase(sl<ProductsRepository>()),
   );
 
+  sl.registerLazySingleton<DeleteProductUseCase>(
+    () => DeleteProductUseCase(sl<ProductsRepository>()),
+  );
+
+  sl.registerLazySingleton<UpdateProductUseCase>(
+    () => UpdateProductUseCase(sl<ProductsRepository>()),
+  );
+
   // Products - Presentation
   sl.registerFactory<ProductsCubit>(
-    () => ProductsCubit(sl<GetProductsUseCase>(), sl<CreateProductUseCase>()),
+    () => ProductsCubit(
+      sl<GetProductsUseCase>(),
+      sl<CreateProductUseCase>(),
+      sl<DeleteProductUseCase>(),
+      sl<UpdateProductUseCase>(),
+    ),
   );
 
   // Categories - Data

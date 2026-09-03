@@ -5,6 +5,7 @@ import '../../../../core/error/failures.dart';
 import '../../domain/entities/product_entity.dart';
 import '../../domain/repositories/products_repository.dart';
 import '../../domain/usecases/create_product_params.dart';
+import '../../domain/usecases/update_product_params.dart';
 import '../datasources/products_remote_data_source.dart';
 
 class ProductsRepositoryImpl implements ProductsRepository {
@@ -37,6 +38,42 @@ class ProductsRepositoryImpl implements ProductsRepository {
       final product = await _remoteDataSource.createProduct(params);
 
       return Right(product);
+    } on DioException catch (error) {
+      return Left(ServerFailure(message: _getDioErrorMessage(error)));
+    } on FormatException catch (error) {
+      return Left(ServerFailure(message: error.message));
+    } catch (_) {
+      return const Left(
+        ServerFailure(message: 'Something went wrong. Please try again.'),
+      );
+    }
+  }
+
+  @override
+  Future<Either<Failure, ProductEntity>> updateProduct(
+    UpdateProductParams params,
+  ) async {
+    try {
+      final product = await _remoteDataSource.updateProduct(params);
+
+      return Right(product);
+    } on DioException catch (error) {
+      return Left(ServerFailure(message: _getDioErrorMessage(error)));
+    } on FormatException catch (error) {
+      return Left(ServerFailure(message: error.message));
+    } catch (_) {
+      return const Left(
+        ServerFailure(message: 'Something went wrong. Please try again.'),
+      );
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> deleteProduct(String slug) async {
+    try {
+      await _remoteDataSource.deleteProduct(slug);
+
+      return const Right(null);
     } on DioException catch (error) {
       return Left(ServerFailure(message: _getDioErrorMessage(error)));
     } on FormatException catch (error) {

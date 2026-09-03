@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../app/injection_container.dart';
 import '../../../home/presentation/pages/home_page.dart';
 import '../../domain/entities/product_entity.dart';
+import '../cubit/products_cubit.dart';
+import '../cubit/products_state.dart';
+import 'edit_product_page.dart';
 
 class ProductDetailsPage extends StatelessWidget {
   const ProductDetailsPage({super.key, required this.product});
@@ -16,155 +21,247 @@ class ProductDetailsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: background,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _Header(
-              onBack: () => Navigator.of(context).pop(),
-              onEdit: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Edit Product will be added next.'),
-                  ),
-                );
-              },
+    return BlocProvider(
+      create: (_) => sl<ProductsCubit>(),
+      child: _ProductDetailsView(product: product),
+    );
+  }
+}
+
+class _ProductDetailsView extends StatelessWidget {
+  const _ProductDetailsView({required this.product});
+
+  final ProductEntity product;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocListener<ProductsCubit, ProductsState>(
+      listener: (context, state) {
+        if (state is ProductDeleted) {
+          Navigator.of(context).pop(true);
+          return;
+        }
+
+        if (state is ProductDeleteFailure) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: const Color(0xFFE84A4A),
+              content: Text(state.message),
             ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.only(bottom: 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _ProductImage(imageUrl: product.imageUrl),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 17, 16, 0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            product.name,
-                            style: const TextStyle(
-                              color: dark,
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            product.categoryName,
-                            style: const TextStyle(color: grey, fontSize: 14),
-                          ),
-                          const SizedBox(height: 16),
-                          _StatsCard(product: product),
-                          const SizedBox(height: 16),
-                          _DescriptionCard(description: product.description),
-                          const SizedBox(height: 16),
-                          _DetailsCard(product: product),
-                          const SizedBox(height: 20),
-                          _EditButton(
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Edit Product will be added next.',
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                          const SizedBox(height: 12),
-                          _DeleteButton(
-                            onPressed: () {
-                              _showDeleteDialog(context);
-                            },
-                          ),
-                        ],
+          );
+        }
+      },
+      child: _ProductDetailsContent(product: product),
+    );
+  }
+}
+
+class _ProductDetailsContent extends StatelessWidget {
+  const _ProductDetailsContent({required this.product});
+
+  final ProductEntity product;
+
+  Future<void> _openEditProductPage(BuildContext context) async {
+    final updated = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => EditProductPage(product: product)),
+    );
+
+    if (!context.mounted || updated != true) {
+      return;
+    }
+
+    Navigator.of(context).pop(true);
+  }
+
+  void _showDeleteDialog(BuildContext pageContext) {
+    final productsCubit = pageContext.read<ProductsCubit>();
+
+    showDialog<void>(
+      context: pageContext,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return BlocProvider.value(
+          value: productsCubit,
+          child: BlocBuilder<ProductsCubit, ProductsState>(
+            builder: (context, state) {
+              final isDeleting = state is ProductDeleting;
+
+              return PopScope(
+                canPop: !isDeleting,
+                child: AlertDialog(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  title: const Text(
+                    'Delete Product?',
+                    style: TextStyle(
+                      color: ProductDetailsPage.dark,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  content: Text(
+                    'Are you sure you want to delete "${product.name}"? '
+                    'This action cannot be undone.',
+                    style: const TextStyle(
+                      color: ProductDetailsPage.grey,
+                      fontSize: 14,
+                      height: 1.4,
+                    ),
+                  ),
+                  actionsPadding: const EdgeInsets.fromLTRB(18, 0, 18, 16),
+                  actions: [
+                    TextButton(
+                      onPressed: isDeleting
+                          ? null
+                          : () => Navigator.of(dialogContext).pop(),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(
+                          color: ProductDetailsPage.grey,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
+                    ),
+                    ElevatedButton(
+                      onPressed: isDeleting
+                          ? null
+                          : () {
+                              Navigator.of(dialogContext).pop();
+                              productsCubit.deleteProduct(product.slug);
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFE84A4A),
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: const Color(0xFFF2A6A6),
+                        disabledForegroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: isDeleting
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text('Delete'),
                     ),
                   ],
                 ),
-              ),
-            ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: _DetailsBottomBar(
-        selectedIndex: 1,
-        onChanged: (index) {
-          if (index == 0) {
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => const HomePage()),
-              (route) => false,
-            );
-            return;
-          }
-
-          if (index == 1) {
-            Navigator.of(context).pop();
-            return;
-          }
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('This page will be available soon.')),
-          );
-        },
-      ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 
-  void _showDeleteDialog(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: const Text(
-            'Delete Product?',
-            style: TextStyle(
-              color: dark,
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          content: Text(
-            'Are you sure you want to delete "${product.name}"? '
-            'This action cannot be undone.',
-            style: const TextStyle(color: grey, fontSize: 14, height: 1.4),
-          ),
-          actionsPadding: const EdgeInsets.fromLTRB(18, 0, 18, 16),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text(
-                'Cancel',
-                style: TextStyle(color: grey, fontWeight: FontWeight.w700),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<ProductsCubit, ProductsState>(
+      builder: (context, state) {
+        final isDeleting = state is ProductDeleting;
 
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Delete Product will be added next.'),
-                  ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFE84A4A),
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+        return Scaffold(
+          backgroundColor: ProductDetailsPage.background,
+          body: SafeArea(
+            child: Column(
+              children: [
+                _Header(
+                  onBack: isDeleting ? null : () => Navigator.of(context).pop(),
+                  onEdit: isDeleting
+                      ? null
+                      : () => _openEditProductPage(context),
                 ),
-              ),
-              child: const Text('Delete'),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.only(bottom: 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _ProductImage(imageUrl: product.imageUrl),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 17, 16, 0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                product.name,
+                                style: const TextStyle(
+                                  color: ProductDetailsPage.dark,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                product.categoryName,
+                                style: const TextStyle(
+                                  color: ProductDetailsPage.grey,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              _StatsCard(product: product),
+                              const SizedBox(height: 16),
+                              _DescriptionCard(
+                                description: product.description,
+                              ),
+                              const SizedBox(height: 16),
+                              _DetailsCard(product: product),
+                              const SizedBox(height: 20),
+                              _EditButton(
+                                onPressed: isDeleting
+                                    ? null
+                                    : () => _openEditProductPage(context),
+                              ),
+                              const SizedBox(height: 12),
+                              _DeleteButton(
+                                isDeleting: isDeleting,
+                                onPressed: isDeleting
+                                    ? null
+                                    : () => _showDeleteDialog(context),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
+          bottomNavigationBar: _DetailsBottomBar(
+            selectedIndex: 1,
+            onChanged: isDeleting
+                ? (_) {}
+                : (index) {
+                    if (index == 0) {
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (_) => const HomePage()),
+                        (route) => false,
+                      );
+                      return;
+                    }
+
+                    if (index == 1) {
+                      Navigator.of(context).pop();
+                      return;
+                    }
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('This page will be available soon.'),
+                      ),
+                    );
+                  },
+          ),
         );
       },
     );
@@ -174,8 +271,8 @@ class ProductDetailsPage extends StatelessWidget {
 class _Header extends StatelessWidget {
   const _Header({required this.onBack, required this.onEdit});
 
-  final VoidCallback onBack;
-  final VoidCallback onEdit;
+  final VoidCallback? onBack;
+  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -532,7 +629,7 @@ class _DetailRow extends StatelessWidget {
 class _EditButton extends StatelessWidget {
   const _EditButton({required this.onPressed});
 
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -544,6 +641,8 @@ class _EditButton extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: ProductDetailsPage.orange,
           foregroundColor: Colors.white,
+          disabledBackgroundColor: const Color(0xFFFFC18F),
+          disabledForegroundColor: Colors.white,
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -559,9 +658,10 @@ class _EditButton extends StatelessWidget {
 }
 
 class _DeleteButton extends StatelessWidget {
-  const _DeleteButton({required this.onPressed});
+  const _DeleteButton({required this.onPressed, required this.isDeleting});
 
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
+  final bool isDeleting;
 
   @override
   Widget build(BuildContext context) {
@@ -570,13 +670,23 @@ class _DeleteButton extends StatelessWidget {
       height: 50,
       child: OutlinedButton.icon(
         onPressed: onPressed,
-        icon: const Icon(Icons.delete_outline_rounded, size: 19),
-        label: const Text(
-          'Delete Product',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+        icon: isDeleting
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Color(0xFFE84A4A),
+                ),
+              )
+            : const Icon(Icons.delete_outline_rounded, size: 19),
+        label: Text(
+          isDeleting ? 'Deleting...' : 'Delete Product',
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
         ),
         style: OutlinedButton.styleFrom(
           foregroundColor: const Color(0xFFE84A4A),
+          disabledForegroundColor: const Color(0xFFE84A4A),
           side: const BorderSide(color: Color(0xFFFFC8C8)),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
