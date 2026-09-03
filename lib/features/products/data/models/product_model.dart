@@ -12,6 +12,7 @@ class ProductModel extends ProductEntity {
     required super.visible,
     required super.imageUrl,
     super.description,
+    super.createdAt,
   });
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
@@ -30,6 +31,7 @@ class ProductModel extends ProductEntity {
       visible: _toBool(json['visible']),
       imageUrl: json['image_url']?.toString() ?? '',
       description: json['description']?.toString(),
+      createdAt: _toDateTime(json['created_at']),
     );
   }
 
@@ -65,5 +67,13 @@ class ProductModel extends ProductEntity {
     final normalizedValue = value?.toString().trim().toLowerCase();
 
     return normalizedValue == '1' || normalizedValue == 'true';
+  }
+
+  static DateTime? _toDateTime(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+
+    return DateTime.tryParse(value.toString())?.toLocal();
   }
 }

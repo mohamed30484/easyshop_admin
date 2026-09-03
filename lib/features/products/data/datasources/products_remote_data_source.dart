@@ -44,6 +44,7 @@ class ProductsRemoteDataSourceImpl implements ProductsRemoteDataSource {
       'price': params.price.toString(),
       'quantity': params.quantity.toString(),
       'categoryid': params.categoryId.toString(),
+      'category_id': params.categoryId.toString(),
       'visible': params.visible ? '1' : '0',
       if (params.description != null && params.description!.trim().isNotEmpty)
         'description': params.description!.trim(),

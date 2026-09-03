@@ -12,6 +12,7 @@ class ProductEntity extends Equatable {
     required this.visible,
     required this.imageUrl,
     this.description,
+    this.createdAt,
   });
 
   final int id;
@@ -25,6 +26,9 @@ class ProductEntity extends Equatable {
   final String imageUrl;
   final String? description;
 
+  /// تاريخ إنشاء المنتج القادم من API: created_at
+  final DateTime? createdAt;
+
   @override
   List<Object?> get props => [
     id,
@@ -37,5 +41,6 @@ class ProductEntity extends Equatable {
     visible,
     imageUrl,
     description,
+    createdAt,
   ];
 }

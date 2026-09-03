@@ -7,6 +7,7 @@ import '../../domain/entities/product_entity.dart';
 import '../cubit/products_cubit.dart';
 import '../cubit/products_state.dart';
 import 'add_product_page.dart';
+import 'product_details_page.dart';
 
 class ProductsPage extends StatelessWidget {
   const ProductsPage({super.key});
@@ -60,6 +61,18 @@ class _ProductsViewState extends State<_ProductsView> {
     ).push<bool>(MaterialPageRoute(builder: (_) => const AddProductPage()));
 
     if (!mounted || created != true) {
+      return;
+    }
+
+    await context.read<ProductsCubit>().getProducts();
+  }
+
+  Future<void> _openProductDetails(ProductEntity product) async {
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => ProductDetailsPage(product: product)),
+    );
+
+    if (!mounted || changed != true) {
       return;
     }
 
@@ -193,7 +206,12 @@ class _ProductsViewState extends State<_ProductsView> {
                         itemCount: products.length,
                         separatorBuilder: (_, _) => const SizedBox(height: 11),
                         itemBuilder: (_, index) {
-                          return _ProductListCard(product: products[index]);
+                          final product = products[index];
+
+                          return _ProductListCard(
+                            product: product,
+                            onTap: () => _openProductDetails(product),
+                          );
                         },
                       ),
                     );
@@ -259,86 +277,92 @@ class _ProductsHeader extends StatelessWidget {
 }
 
 class _ProductListCard extends StatelessWidget {
-  const _ProductListCard({required this.product});
+  const _ProductListCard({required this.product, required this.onTap});
 
   final ProductEntity product;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 89,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(17),
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(17),
-      ),
-      child: Row(
-        children: [
-          _ProductImage(imageUrl: product.imageUrl),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  product.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: _ProductsViewState.dark,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  product.categoryName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: _ProductsViewState.grey,
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Row(
+        child: Container(
+          height: 89,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(17)),
+          child: Row(
+            children: [
+              _ProductImage(imageUrl: product.imageUrl),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      product.price.toStringAsFixed(0),
+                      product.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: _ProductsViewState.orange,
+                        color: _ProductsViewState.dark,
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-                    const SizedBox(width: 9),
+                    const SizedBox(height: 3),
                     Text(
-                      'Qty ${product.quantity}',
+                      product.categoryName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: _ProductsViewState.grey,
                         fontSize: 12,
                       ),
                     ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Text(
+                          product.price.toStringAsFixed(0),
+                          style: const TextStyle(
+                            color: _ProductsViewState.orange,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(width: 9),
+                        Text(
+                          'Qty ${product.quantity}',
+                          style: const TextStyle(
+                            color: _ProductsViewState.grey,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
-              ],
-            ),
-          ),
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              _VisibilityBadge(visible: product.visible),
-              const SizedBox(height: 8),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: _ProductsViewState.grey,
-                size: 21,
+              ),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  _VisibilityBadge(visible: product.visible),
+                  const SizedBox(height: 8),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: _ProductsViewState.grey,
+                    size: 21,
+                  ),
+                ],
               ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
