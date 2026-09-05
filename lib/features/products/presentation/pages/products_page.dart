@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../app/injection_container.dart';
+import '../../../categories/presentation/pages/manage_categories_page.dart';
 import '../../../home/presentation/pages/home_page.dart';
 import '../../domain/entities/product_entity.dart';
 import '../cubit/products_cubit.dart';
@@ -30,6 +31,7 @@ class _ProductsView extends StatefulWidget {
 
 class _ProductsViewState extends State<_ProductsView> {
   final _searchController = TextEditingController();
+
   String _query = '';
   int _selectedIndex = 1;
 
@@ -53,6 +55,18 @@ class _ProductsViewState extends State<_ProductsView> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _openManageCategoriesPage() async {
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const ManageCategoriesPage()));
+
+    if (!mounted) {
+      return;
+    }
+
+    await context.read<ProductsCubit>().getProducts();
   }
 
   Future<void> _openAddProductPage() async {
@@ -144,7 +158,7 @@ class _ProductsViewState extends State<_ProductsView> {
             ),
             const SizedBox(height: 10),
             OutlinedButton.icon(
-              onPressed: () {},
+              onPressed: _openManageCategoriesPage,
               icon: const Icon(Icons.sell_outlined, size: 16),
               label: const Text('Manage Categories'),
               style: OutlinedButton.styleFrom(

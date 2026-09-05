@@ -14,7 +14,9 @@ import '../features/auth/presentation/cubit/auth_cubit.dart';
 import '../features/categories/data/datasources/categories_remote_data_source.dart';
 import '../features/categories/data/repositories/categories_repository_impl.dart';
 import '../features/categories/domain/repositories/categories_repository.dart';
+import '../features/categories/domain/usecases/create_category_usecase.dart';
 import '../features/categories/domain/usecases/get_categories_usecase.dart';
+import '../features/categories/domain/usecases/update_category_usecase.dart';
 import '../features/categories/presentation/cubit/categories_cubit.dart';
 
 import '../features/products/data/datasources/products_remote_data_source.dart';
@@ -118,8 +120,20 @@ Future<void> setupDependencies() async {
     () => GetCategoriesUseCase(sl<CategoriesRepository>()),
   );
 
+  sl.registerLazySingleton<CreateCategoryUseCase>(
+    () => CreateCategoryUseCase(sl<CategoriesRepository>()),
+  );
+
+  sl.registerLazySingleton<UpdateCategoryUseCase>(
+    () => UpdateCategoryUseCase(sl<CategoriesRepository>()),
+  );
+
   // Categories - Presentation
   sl.registerFactory<CategoriesCubit>(
-    () => CategoriesCubit(sl<GetCategoriesUseCase>()),
+    () => CategoriesCubit(
+      sl<GetCategoriesUseCase>(),
+      sl<CreateCategoryUseCase>(),
+      sl<UpdateCategoryUseCase>(),
+    ),
   );
 }
