@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../app/injection_container.dart';
 import '../../../categories/presentation/pages/manage_categories_page.dart';
 import '../../../home/presentation/pages/home_page.dart';
+import '../../../orders/presentation/pages/orders_page.dart';
 import '../../domain/entities/product_entity.dart';
 import '../cubit/products_cubit.dart';
 import '../cubit/products_state.dart';
@@ -105,6 +106,13 @@ class _ProductsViewState extends State<_ProductsView> {
       setState(() {
         _selectedIndex = 1;
       });
+      return;
+    }
+
+    if (index == 2) {
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const OrdersPage()));
       return;
     }
 

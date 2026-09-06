@@ -20,6 +20,12 @@ import '../features/categories/domain/usecases/get_categories_usecase.dart';
 import '../features/categories/domain/usecases/update_category_usecase.dart';
 import '../features/categories/presentation/cubit/categories_cubit.dart';
 
+import '../features/orders/data/datasources/orders_remote_data_source.dart';
+import '../features/orders/data/repositories/orders_repository_impl.dart';
+import '../features/orders/domain/repositories/orders_repository.dart';
+import '../features/orders/domain/usecases/get_orders_usecase.dart';
+import '../features/orders/presentation/cubit/orders_cubit.dart';
+
 import '../features/products/data/datasources/products_remote_data_source.dart';
 import '../features/products/data/repositories/products_repository_impl.dart';
 import '../features/products/domain/repositories/products_repository.dart';
@@ -142,4 +148,21 @@ Future<void> setupDependencies() async {
       sl<DeleteCategoryUseCase>(),
     ),
   );
+
+  // Orders - Data
+  sl.registerLazySingleton<OrdersRemoteDataSource>(
+    () => OrdersRemoteDataSourceImpl(sl<ApiClient>()),
+  );
+
+  sl.registerLazySingleton<OrdersRepository>(
+    () => OrdersRepositoryImpl(sl<OrdersRemoteDataSource>()),
+  );
+
+  // Orders - Domain
+  sl.registerLazySingleton<GetOrdersUseCase>(
+    () => GetOrdersUseCase(sl<OrdersRepository>()),
+  );
+
+  // Orders - Presentation
+  sl.registerFactory<OrdersCubit>(() => OrdersCubit(sl<GetOrdersUseCase>()));
 }
