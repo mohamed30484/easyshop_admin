@@ -65,6 +65,22 @@ class CategoriesRepositoryImpl implements CategoriesRepository {
     }
   }
 
+  @override
+  Future<Either<Failure, void>> deleteCategory(String slug) async {
+    try {
+      await _remoteDataSource.deleteCategory(slug);
+      return const Right(null);
+    } on DioException catch (error) {
+      return Left(ServerFailure(message: _getDioErrorMessage(error)));
+    } on FormatException catch (error) {
+      return Left(ServerFailure(message: error.message));
+    } catch (_) {
+      return const Left(
+        ServerFailure(message: 'Something went wrong. Please try again.'),
+      );
+    }
+  }
+
   String _getDioErrorMessage(DioException error) {
     final data = error.response?.data;
 

@@ -22,6 +22,7 @@ class _EditCategoryPageState extends State<EditCategoryPage> {
   static const grey = Color(0xFF92939D);
   static const background = Color(0xFFF7F8FA);
   static const fieldBackground = Color(0xFFF0EFF5);
+  static const red = Color(0xFFE84B4B);
 
   final _formKey = GlobalKey<FormState>();
 
@@ -61,6 +62,64 @@ class _EditCategoryPageState extends State<EditCategoryPage> {
     );
   }
 
+  Future<void> _confirmDelete() async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text(
+            'Delete Category?',
+            style: TextStyle(
+              color: dark,
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          content: Text(
+            'Are you sure you want to delete "${widget.category.name}"? This action cannot be undone.',
+            style: const TextStyle(color: grey, fontSize: 14, height: 1.4),
+          ),
+          actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 18),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              style: TextButton.styleFrom(
+                foregroundColor: grey,
+                textStyle: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              style: ElevatedButton.styleFrom(
+                elevation: 0,
+                backgroundColor: red,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                textStyle: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldDelete != true || !mounted) {
+      return;
+    }
+
+    FocusScope.of(context).unfocus();
+    context.read<CategoriesCubit>().deleteCategory(widget.category.slug);
+  }
+
   void _onBottomNavigationChanged(int index) {
     if (index == 0) {
       Navigator.of(context).pushAndRemoveUntil(
@@ -89,6 +148,11 @@ class _EditCategoryPageState extends State<EditCategoryPage> {
           return;
         }
 
+        if (state is CategoriesDeleted) {
+          Navigator.of(context).pop(true);
+          return;
+        }
+
         if (state is CategoriesFailure) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -101,6 +165,8 @@ class _EditCategoryPageState extends State<EditCategoryPage> {
       child: BlocBuilder<CategoriesCubit, CategoriesState>(
         builder: (context, state) {
           final isSaving = state is CategoriesUpdating;
+          final isDeleting = state is CategoriesDeleting;
+          final isProcessing = isSaving || isDeleting;
 
           return Scaffold(
             backgroundColor: background,
@@ -110,7 +176,7 @@ class _EditCategoryPageState extends State<EditCategoryPage> {
                 child: Column(
                   children: [
                     _EditCategoryHeader(
-                      onBack: isSaving
+                      onBack: isProcessing
                           ? () {}
                           : () => Navigator.of(context).pop(),
                     ),
@@ -132,7 +198,7 @@ class _EditCategoryPageState extends State<EditCategoryPage> {
                             const SizedBox(height: 9),
                             TextFormField(
                               controller: _nameController,
-                              enabled: !isSaving,
+                              enabled: !isProcessing,
                               textCapitalization: TextCapitalization.words,
                               textInputAction: TextInputAction.next,
                               style: const TextStyle(
@@ -176,7 +242,7 @@ class _EditCategoryPageState extends State<EditCategoryPage> {
                             const SizedBox(height: 9),
                             TextFormField(
                               controller: _descriptionController,
-                              enabled: !isSaving,
+                              enabled: !isProcessing,
                               textCapitalization: TextCapitalization.sentences,
                               textInputAction: TextInputAction.done,
                               maxLines: 1,
@@ -189,7 +255,7 @@ class _EditCategoryPageState extends State<EditCategoryPage> {
                                 hintText: 'Brief description...',
                               ),
                               onFieldSubmitted: (_) {
-                                if (!isSaving) {
+                                if (!isProcessing) {
                                   _saveChanges();
                                 }
                               },
@@ -199,7 +265,7 @@ class _EditCategoryPageState extends State<EditCategoryPage> {
                               width: double.infinity,
                               height: 48,
                               child: ElevatedButton(
-                                onPressed: isSaving ? null : _saveChanges,
+                                onPressed: isProcessing ? null : _saveChanges,
                                 style: ElevatedButton.styleFrom(
                                   elevation: 0,
                                   backgroundColor: orange,
@@ -228,6 +294,42 @@ class _EditCategoryPageState extends State<EditCategoryPage> {
                                     : const Text('Save Changes'),
                               ),
                             ),
+                            const SizedBox(height: 14),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 48,
+                              child: OutlinedButton(
+                                onPressed: isProcessing ? null : _confirmDelete,
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: red,
+                                  disabledForegroundColor: red.withValues(
+                                    alpha: 0.45,
+                                  ),
+                                  side: BorderSide(
+                                    color: isProcessing
+                                        ? red.withValues(alpha: 0.35)
+                                        : red,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  textStyle: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                child: isDeleting
+                                    ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2.4,
+                                          color: red,
+                                        ),
+                                      )
+                                    : const Text('Delete Category'),
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -238,7 +340,7 @@ class _EditCategoryPageState extends State<EditCategoryPage> {
             ),
             bottomNavigationBar: _EditCategoryBottomBar(
               selectedIndex: 1,
-              onChanged: isSaving ? (_) {} : _onBottomNavigationChanged,
+              onChanged: isProcessing ? (_) {} : _onBottomNavigationChanged,
             ),
           );
         },

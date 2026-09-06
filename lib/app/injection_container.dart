@@ -15,6 +15,7 @@ import '../features/categories/data/datasources/categories_remote_data_source.da
 import '../features/categories/data/repositories/categories_repository_impl.dart';
 import '../features/categories/domain/repositories/categories_repository.dart';
 import '../features/categories/domain/usecases/create_category_usecase.dart';
+import '../features/categories/domain/usecases/delete_category_usecase.dart';
 import '../features/categories/domain/usecases/get_categories_usecase.dart';
 import '../features/categories/domain/usecases/update_category_usecase.dart';
 import '../features/categories/presentation/cubit/categories_cubit.dart';
@@ -128,12 +129,17 @@ Future<void> setupDependencies() async {
     () => UpdateCategoryUseCase(sl<CategoriesRepository>()),
   );
 
+  sl.registerLazySingleton<DeleteCategoryUseCase>(
+    () => DeleteCategoryUseCase(sl<CategoriesRepository>()),
+  );
+
   // Categories - Presentation
   sl.registerFactory<CategoriesCubit>(
     () => CategoriesCubit(
       sl<GetCategoriesUseCase>(),
       sl<CreateCategoryUseCase>(),
       sl<UpdateCategoryUseCase>(),
+      sl<DeleteCategoryUseCase>(),
     ),
   );
 }

@@ -9,6 +9,8 @@ abstract class CategoriesRemoteDataSource {
   Future<CategoryModel> createCategory(CreateCategoryParams params);
 
   Future<CategoryModel> updateCategory(UpdateCategoryParams params);
+
+  Future<void> deleteCategory(String slug);
 }
 
 class CategoriesRemoteDataSourceImpl implements CategoriesRemoteDataSource {
@@ -70,6 +72,11 @@ class CategoriesRemoteDataSourceImpl implements CategoriesRemoteDataSource {
       response.data,
       fallbackMessage: 'Updated category data was not found.',
     );
+  }
+
+  @override
+  Future<void> deleteCategory(String slug) async {
+    await _apiClient.dio.delete('/admin/categories/destroy/$slug');
   }
 
   CategoryModel _parseCategoryResponse(

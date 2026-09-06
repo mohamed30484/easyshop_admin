@@ -15,4 +15,6 @@ abstract class CategoriesRepository {
   Future<Either<Failure, CategoryEntity>> updateCategory(
     UpdateCategoryParams params,
   );
+
+  Future<Either<Failure, void>> deleteCategory(String slug);
 }

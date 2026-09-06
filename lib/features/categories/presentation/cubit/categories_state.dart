@@ -38,6 +38,14 @@ class CategoriesUpdated extends CategoriesState {
   final CategoryEntity category;
 }
 
+class CategoriesDeleting extends CategoriesState {
+  const CategoriesDeleting();
+}
+
+class CategoriesDeleted extends CategoriesState {
+  const CategoriesDeleted();
+}
+
 class CategoriesFailure extends CategoriesState {
   const CategoriesFailure(this.message);
 
