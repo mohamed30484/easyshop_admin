@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../app/injection_container.dart';
 import '../../../home/presentation/pages/home_page.dart';
 import '../../../products/presentation/pages/products_page.dart';
+import '../../../profile/presentation/pages/profile_page.dart';
 import '../../domain/entities/order_entity.dart';
 import '../cubit/orders_cubit.dart';
 import '../cubit/orders_state.dart';
@@ -58,9 +59,11 @@ class _OrdersViewState extends State<_OrdersView> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('This page will be available soon.')),
-    );
+    if (index == 3) {
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const ProfilePage()));
+    }
   }
 
   void _openOrderDetails(OrderEntity order) {

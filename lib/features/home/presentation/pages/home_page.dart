@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/services/admin_profile_storage.dart';
 import '../../../auth/data/models/admin_model.dart';
-import 'package:easyshop_admin/features/products/presentation/pages/products_page.dart';
+import '../../../orders/presentation/pages/orders_page.dart';
+import '../../../products/presentation/pages/products_page.dart';
+import '../../../profile/presentation/pages/profile_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -47,22 +49,28 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         _selectedIndex = 0;
       });
-
       return;
     }
 
     if (index == 1) {
-      Navigator.pushReplacement(
-        context,
+      Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const ProductsPage()),
       );
-
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('This page will be available soon.')),
-    );
+    if (index == 2) {
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const OrdersPage()));
+      return;
+    }
+
+    if (index == 3) {
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const ProfilePage()));
+    }
   }
 
   @override
@@ -93,7 +101,13 @@ class _HomePageState extends State<HomePage> {
                         _SectionTitle(
                           title: 'Recent Orders',
                           action: 'See all',
-                          onAction: () {},
+                          onAction: () {
+                            Navigator.of(context).pushReplacement(
+                              MaterialPageRoute(
+                                builder: (_) => const OrdersPage(),
+                              ),
+                            );
+                          },
                         ),
                         const SizedBox(height: 11),
                         const _OrderCard(
@@ -111,7 +125,13 @@ class _HomePageState extends State<HomePage> {
                         _SectionTitle(
                           title: 'Products Overview',
                           action: 'See all',
-                          onAction: () {},
+                          onAction: () {
+                            Navigator.of(context).pushReplacement(
+                              MaterialPageRoute(
+                                builder: (_) => const ProductsPage(),
+                              ),
+                            );
+                          },
                         ),
                         const SizedBox(height: 11),
                         const _ProductCard(

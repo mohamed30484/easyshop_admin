@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../home/presentation/pages/home_page.dart';
 import '../../../products/presentation/pages/products_page.dart';
+import '../../../profile/presentation/pages/profile_page.dart';
 import '../../domain/entities/order_entity.dart';
 
 class OrderDetailsPage extends StatelessWidget {
@@ -93,8 +94,9 @@ class OrderDetailsPage extends StatelessWidget {
         },
         onOrdersTap: () => Navigator.of(context).pop(),
         onProfileTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('This page will be available soon.')),
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const ProfilePage()),
+            (route) => false,
           );
         },
       ),

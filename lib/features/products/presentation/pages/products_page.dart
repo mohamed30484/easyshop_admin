@@ -5,6 +5,7 @@ import '../../../../app/injection_container.dart';
 import '../../../categories/presentation/pages/manage_categories_page.dart';
 import '../../../home/presentation/pages/home_page.dart';
 import '../../../orders/presentation/pages/orders_page.dart';
+import '../../../profile/presentation/pages/profile_page.dart';
 import '../../domain/entities/product_entity.dart';
 import '../cubit/products_cubit.dart';
 import '../cubit/products_state.dart';
@@ -116,9 +117,11 @@ class _ProductsViewState extends State<_ProductsView> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('This page will be available soon.')),
-    );
+    if (index == 3) {
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const ProfilePage()));
+    }
   }
 
   List<ProductEntity> _filterProducts(List<ProductEntity> products) {
