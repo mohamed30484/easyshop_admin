@@ -221,17 +221,15 @@ The exact backend contract, validation rules, and route middleware are owned by 
 
 ## Screenshots
 
-Add product screenshots to `docs/screenshots/` and replace the placeholder paths below with your own images.
-
 | Screen | Preview |
 | --- | --- |
-| Login | `![Login]([https://drive.google.com/uc?export=view&id=1iYGdKHvfxxdXHuqCvJy5iarCvUObO1JH)](https://drive.google.com/uc?export=view&id=1iYGdKHvfxxdXHuqCvJy5iarCvUObO1JH)` |
-| Merchant registration | `![Registration](docs/screenshots/register.png)` |
-| Dashboard | `![Dashboard](docs/screenshots/dashboard.png)` |
-| Products | `![Products](docs/screenshots/products.png)` |
-| Orders | `![Orders](docs/screenshots/orders.png)` |
-| Order details | `![Order details](docs/screenshots/order-details.png)` |
-| Profile | `![Profile](docs/screenshots/profile.png)` |
+| Login | <img src="https://drive.google.com/uc?export=view&id=FILE_ID_LOGIN" alt="Login Screen" width="260" /> |
+| Merchant registration | <img src="https://drive.google.com/uc?export=view&id=FILE_ID_REGISTER" alt="Merchant Registration Screen" width="260" /> |
+| Dashboard | <img src="https://drive.google.com/uc?export=view&id=FILE_ID_DASHBOARD" alt="Dashboard Screen" width="260" /> |
+| Products | <img src="https://drive.google.com/uc?export=view&id=FILE_ID_PRODUCTS" alt="Products Screen" width="260" /> |
+| Orders | <img src="https://drive.google.com/uc?export=view&id=FILE_ID_ORDERS" alt="Orders Screen" width="260" /> |
+| Order details | <img src="https://drive.google.com/uc?export=view&id=FILE_ID_ORDER_DETAILS" alt="Order Details Screen" width="260" /> |
+| Profile | <img src="https://drive.google.com/uc?export=view&id=FILE_ID_PROFILE" alt="Profile Screen" width="260" /> |
 
 > Remove rows for screens you do not plan to document, or replace the code-formatted placeholders with actual Markdown image tags after adding the files.
 
@@ -250,10 +248,10 @@ Add product screenshots to `docs/screenshots/` and replace the placeholder paths
 
 ## Social Links
 
-- GitHub: [@your-github-username](https://github.com/your-github-username)
+- GitHub: [@your-github-username](https://github.com/mohamed30484)
 - LinkedIn: [Your LinkedIn Profile](https://www.linkedin.com/in/your-linkedin-username/)
 - Portfolio: [Your Portfolio](https://your-portfolio-domain.com)
-- Email: [your-email@example.com](mailto:your-email@example.com)
+- Email: [your-email@example.com](mohamedabdelaziz9@gmail.com)
 
 Replace these placeholders with the project maintainer’s actual public links.
 
