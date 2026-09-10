@@ -229,6 +229,7 @@ The exact backend contract, validation rules, and route middleware are owned by 
 | Products | <img src="https://drive.google.com/uc?export=view&id=1pWBdUkqiCeBLljbAOasRmVrbC-OsOGcA" alt="Products Screen" width="260" /> <img src="https://drive.google.com/uc?export=view&id=1fMist72JQKZKfbIYRebyBVCVlbA1V4Qo" alt="Products Screen" width="260" /> <img src="https://drive.google.com/uc?export=view&id=113fne7flloCDDNkuF8FDo6mgbTpWo7MH" alt="Products Screen" width="260" /> <img src="https://drive.google.com/uc?export=view&id=1Apm8lzWlWI0aaHsCxHkOtQjJBZuYIQPy" alt="Products Screen" width="260" /> |
 | Orders | <img src="https://drive.google.com/uc?export=view&id=1w7XzCi39xYvDBtMGwG6DheRrfUvLykRe" alt="Orders Screen" width="260" /> |
 | Order details | <img src="https://drive.google.com/uc?export=view&id=1CjsTwh3dzhoyABsmvZQQHYhDYXwm6zCM" alt="Order Details Screen" width="260" /> |
+| Categories | <img src="https://drive.google.com/uc?export=view&id=1tN52uBZzFM_F2nqdGC8rzOIMwCR8XH6f" alt="Categories Screen" width="260" /><img src="https://drive.google.com/uc?export=view&id=1YeTOYMt0eM_c6S_j1gCmpH4F0Zy-0Z-G" alt="Categories Screen" width="260" /><img src="https://drive.google.com/uc?export=view&id=1L6_KtLvZYFm0gw2Ou_0HOvl2BZM2ge-I" alt="Categories Screen" width="260" /> |
 | Profile | <img src="https://drive.google.com/uc?export=view&id=FILE_ID_PROFILE" alt="Profile Screen" width="260" /> |
 
 ## Future Improvements
