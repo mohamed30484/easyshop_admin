@@ -250,7 +250,7 @@ Add product screenshots to `docs/screenshots/` and replace the placeholder paths
 
 ## Social Links
 
-- GitHub: [@your-github-username](https://github.com/your-github-username)
+- GitHub: [@your-github-username]([https://github.com/your-github-username](https://drive.google.com/file/d/1iYGdKHvfxxdXHuqCvJy5iarCvUObO1JH/view))
 - LinkedIn: [Your LinkedIn Profile](https://www.linkedin.com/in/your-linkedin-username/)
 - Portfolio: [Your Portfolio](https://your-portfolio-domain.com)
 - Email: [your-email@example.com](mailto:your-email@example.com)
