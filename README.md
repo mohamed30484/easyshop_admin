@@ -225,7 +225,7 @@ Add product screenshots to `docs/screenshots/` and replace the placeholder paths
 
 | Screen | Preview |
 | --- | --- |
-| Login | `![Login](docs/screenshots/login.png)` |
+| Login | `![Login](https://drive.google.com/uc?export=view&id=1iYGdKHvfxxdXHuqCvJy5iarCvUObO1JH)` |
 | Merchant registration | `![Registration](docs/screenshots/register.png)` |
 | Dashboard | `![Dashboard](docs/screenshots/dashboard.png)` |
 | Products | `![Products](docs/screenshots/products.png)` |
