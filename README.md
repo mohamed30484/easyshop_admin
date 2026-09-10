@@ -225,7 +225,7 @@ Add product screenshots to `docs/screenshots/` and replace the placeholder paths
 
 | Screen | Preview |
 | --- | --- |
-| Login | `(https://drive.google.com/file/d/1iYGdKHvfxxdXHuqCvJy5iarCvUObO1JH/view)` |
+| Login | `![Login](docs/screenshots/login.png)` |
 | Merchant registration | `![Registration](docs/screenshots/register.png)` |
 | Dashboard | `![Dashboard](docs/screenshots/dashboard.png)` |
 | Products | `![Products](docs/screenshots/products.png)` |
@@ -250,7 +250,7 @@ Add product screenshots to `docs/screenshots/` and replace the placeholder paths
 
 ## Social Links
 
-- GitHub:
+- GitHub: [@your-github-username](https://github.com/your-github-username)
 - LinkedIn: [Your LinkedIn Profile](https://www.linkedin.com/in/your-linkedin-username/)
 - Portfolio: [Your Portfolio](https://your-portfolio-domain.com)
 - Email: [your-email@example.com](mailto:your-email@example.com)
@@ -271,4 +271,3 @@ When contributing:
 ## License
 
 Add a license file to the repository and state the selected license here, for example: `MIT License`.
-
