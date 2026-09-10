@@ -247,10 +247,9 @@ The exact backend contract, validation rules, and route middleware are owned by 
 
 ## Social Links
 
-- GitHub: [@your-github-username](https://github.com/mohamed30484)
-- LinkedIn: [Your LinkedIn Profile](https://www.linkedin.com/in/your-linkedin-username/)
-- Portfolio: [Your Portfolio](https://your-portfolio-domain.com)
-- Email: [your-email@example.com](mohamedabdelaziz9@gmail.com)
+- GitHub: [https://github.com/mohamed30484](https://github.com/mohamed30484)
+- LinkedIn: [https://www.linkedin.com/in/your-linkedin-username/](https://www.linkedin.com/in/your-linkedin-username/)
+- Email: [mohamedabdelaziz9@gmail.com](mohamedabdelaziz9@gmail.com)
 
 Replace these placeholders with the project maintainer’s actual public links.
 
