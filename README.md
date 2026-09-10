@@ -1,4 +1,5 @@
 Easy Shop Merchant Portal
+
 A Flutter-based mobile administration application for merchants to manage their store profile, catalog, categories, and customer orders through a REST API.
 Easy Shop Merchant Portal provides a focused operational workspace for store administrators. It supports a complete merchant onboarding flow, secure authentication with OTP verification, product and category management, order monitoring, profile management, and a dashboard that summarizes key store activity.
 Note: This repository contains the Flutter merchant/admin application. It consumes a separate backend API; the backend implementation is not included here.
@@ -70,6 +71,7 @@ flutter test
 
 Before adding or extending tests, consider mocking remote data sources or repositories so domain and presentation behavior can be verified independently of the live API.
 Folder Structure
+
 lib/
 ├── app/
 │   ├── app.dart                      # MaterialApp setup and global providers
