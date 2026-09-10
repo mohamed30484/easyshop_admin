@@ -223,15 +223,13 @@ The exact backend contract, validation rules, and route middleware are owned by 
 
 | Screen | Preview |
 | --- | --- |
-| Login | <img src="[https://drive.google.com/uc?export=view&id=FILE_ID_LOGIN](https://drive.google.com/file/d/1iYGdKHvfxxdXHuqCvJy5iarCvUObO1JH/view?usp=drive_link)" alt="Login Screen" width="260" /> |
+| Login | <img src="https://drive.google.com/uc?export=view&id=1iYGdKHvfxxdXHuqCvJy5iarCvUObO1JH" alt="Login Screen" width="260" /> |
 | Merchant registration | <img src="https://drive.google.com/uc?export=view&id=FILE_ID_REGISTER" alt="Merchant Registration Screen" width="260" /> |
 | Dashboard | <img src="https://drive.google.com/uc?export=view&id=FILE_ID_DASHBOARD" alt="Dashboard Screen" width="260" /> |
 | Products | <img src="https://drive.google.com/uc?export=view&id=FILE_ID_PRODUCTS" alt="Products Screen" width="260" /> |
 | Orders | <img src="https://drive.google.com/uc?export=view&id=FILE_ID_ORDERS" alt="Orders Screen" width="260" /> |
 | Order details | <img src="https://drive.google.com/uc?export=view&id=FILE_ID_ORDER_DETAILS" alt="Order Details Screen" width="260" /> |
 | Profile | <img src="https://drive.google.com/uc?export=view&id=FILE_ID_PROFILE" alt="Profile Screen" width="260" /> |
-
-> Remove rows for screens you do not plan to document, or replace the code-formatted placeholders with actual Markdown image tags after adding the files.
 
 ## Future Improvements
 
