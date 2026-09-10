@@ -268,4 +268,4 @@ When contributing:
 
 This project is licensed under the [MIT License](LICENSE).
 
-Copyright (c) 2026 Mohamed Sayed Abdel Aziz
+Copyright (c) 2026 Mohamed Sayed Abdel Aziz and Easy Learn Academy. All rights reserved.
