@@ -1,3 +1,5 @@
+import 'package:easyshop_admin/features/categories/presentation/pages/manage_categories_page.dart';
+import 'package:easyshop_admin/features/products/presentation/pages/add_product_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -619,7 +621,11 @@ class _QuickActions extends StatelessWidget {
           child: SizedBox(
             height: 50,
             child: ElevatedButton.icon(
-              onPressed: () {},
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const AddProductPage()),
+                );
+              },
               icon: const Icon(Icons.add_rounded, size: 21),
               label: const Text('Add Product'),
               style: ElevatedButton.styleFrom(
@@ -642,7 +648,13 @@ class _QuickActions extends StatelessWidget {
           child: SizedBox(
             height: 50,
             child: OutlinedButton.icon(
-              onPressed: () {},
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const ManageCategoriesPage(),
+                  ),
+                );
+              },
               icon: const Icon(Icons.sell_outlined, size: 20),
               label: const Text('Categories'),
               style: OutlinedButton.styleFrom(
