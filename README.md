@@ -266,4 +266,6 @@ When contributing:
 
 ## License
 
-Add a license file to the repository and state the selected license here, for example: `MIT License`.
+This project is licensed under the [MIT License](LICENSE).
+
+Copyright (c) 2026 Mohamed Sayed Abdel Aziz
