@@ -224,7 +224,7 @@ The exact backend contract, validation rules, and route middleware are owned by 
 | Screen | Preview |
 | --- | --- |
 | Login | <img src="https://drive.google.com/uc?export=view&id=1iYGdKHvfxxdXHuqCvJy5iarCvUObO1JH" alt="Login Screen" width="260" /> <img src="https://drive.google.com/uc?export=view&id=1z4PB_9TXyJ2ElzBK_bJf-0B7MjKicLQ3" alt="Login Screen" width="260" /> | 
-| Merchant registration | <img src="https://drive.google.com/uc?export=view&id=FILE_ID_REGISTER" alt="Merchant Registration Screen" width="260" /> |
+| Merchant registration | <img src="https://drive.google.com/uc?export=view&id=1z6WFU8s4ooywn1EIqBjm0S6cSskYob_5" alt="Merchant Registration Screen" width="260" /> |
 | Dashboard | <img src="https://drive.google.com/uc?export=view&id=FILE_ID_DASHBOARD" alt="Dashboard Screen" width="260" /> |
 | Products | <img src="https://drive.google.com/uc?export=view&id=FILE_ID_PRODUCTS" alt="Products Screen" width="260" /> |
 | Orders | <img src="https://drive.google.com/uc?export=view&id=FILE_ID_ORDERS" alt="Orders Screen" width="260" /> |
