@@ -227,8 +227,8 @@ The exact backend contract, validation rules, and route middleware are owned by 
 | Merchant registration | <img src="https://drive.google.com/uc?export=view&id=1z6WFU8s4ooywn1EIqBjm0S6cSskYob_5" alt="Merchant Registration Screen" width="260" /> <img src="https://drive.google.com/uc?export=view&id=1SK2q3EUQTr6zONpUqpQlP4flClAcO4Fs" alt="Merchant Registration Screen" width="260" /><img src="https://drive.google.com/uc?export=view&id=1GNuATimhUdt6O6eTs1DvAqPQnMkH5xAb" alt="Merchant Registration Screen" width="260" />|
 | Dashboard | <img src="https://drive.google.com/uc?export=view&id=1cbnRb5i5lJbTQKL3KENiURUIhz2npczh" alt="Dashboard Screen" width="260" /> |
 | Products | <img src="https://drive.google.com/uc?export=view&id=1pWBdUkqiCeBLljbAOasRmVrbC-OsOGcA" alt="Products Screen" width="260" /> <img src="https://drive.google.com/uc?export=view&id=1fMist72JQKZKfbIYRebyBVCVlbA1V4Qo" alt="Products Screen" width="260" /> <img src="https://drive.google.com/uc?export=view&id=113fne7flloCDDNkuF8FDo6mgbTpWo7MH" alt="Products Screen" width="260" /> <img src="https://drive.google.com/uc?export=view&id=1Apm8lzWlWI0aaHsCxHkOtQjJBZuYIQPy" alt="Products Screen" width="260" /> |
-| Orders | <img src="https://drive.google.com/uc?export=view&id=FILE_ID_ORDERS" alt="Orders Screen" width="260" /> |
-| Order details | <img src="https://drive.google.com/uc?export=view&id=FILE_ID_ORDER_DETAILS" alt="Order Details Screen" width="260" /> |
+| Orders | <img src="https://drive.google.com/uc?export=view&id=1w7XzCi39xYvDBtMGwG6DheRrfUvLykRe" alt="Orders Screen" width="260" /> |
+| Order details | <img src="https://drive.google.com/uc?export=view&id=1CjsTwh3dzhoyABsmvZQQHYhDYXwm6zCM" alt="Order Details Screen" width="260" /> |
 | Profile | <img src="https://drive.google.com/uc?export=view&id=FILE_ID_PROFILE" alt="Profile Screen" width="260" /> |
 
 ## Future Improvements
