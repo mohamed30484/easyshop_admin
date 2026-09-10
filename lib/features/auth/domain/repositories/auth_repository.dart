@@ -20,4 +20,6 @@ abstract class AuthRepository {
   });
 
   Future<Either<Failure, void>> resendOtpAdmin({required String email});
+
+  Future<Either<Failure, void>> logoutAdmin();
 }

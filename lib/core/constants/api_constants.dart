@@ -1,8 +1,18 @@
-abstract final class ApiConstants {
-  static const String baseUrl = 'https://easylearn.devawy.com/api';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-  static const String apiKey =
-      'wQ9KxY7nP2LrA5FmD8TsV1BhE6JzNc4UyRg3KqXpWoMf7CdSaHt9LeIk2On8GbYu';
+abstract final class ApiConstants {
+  /// القيم دي بتتقرأ من ملف `.env` (متجاهل من Git) بدل ما تكون مكتوبة هنا
+  /// في الكود مباشرة. لازم `dotenv.load()` يتنفذ في `main.dart` الأول
+  /// (قبل `runApp`) عشان القيم دي تبقى متاحة.
+  static String get baseUrl =>
+      dotenv.env['API_BASE_URL'] ?? 'https://easylearn.devawy.com/api';
+
+  /// دومين السيرفر بدون `/api` — بيتستخدم لبناء روابط كاملة
+  /// للصور/الملفات لو الـ API رجّع مسار نسبي بدل رابط كامل.
+  static String get storageBaseUrl =>
+      dotenv.env['STORAGE_BASE_URL'] ?? 'https://easylearn.devawy.com';
+
+  static String get apiKey => dotenv.env['API_KEY'] ?? '';
 
   static const String adminLogin = '/admin/login';
   static const String adminLogout = '/admin/logout';

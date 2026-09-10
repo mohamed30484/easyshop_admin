@@ -48,6 +48,10 @@ class AuthOtpResendSuccess extends AuthState {
   const AuthOtpResendSuccess();
 }
 
+class AuthLogoutSuccess extends AuthState {
+  const AuthLogoutSuccess();
+}
+
 class AuthFailure extends AuthState {
   const AuthFailure({required this.message});
 

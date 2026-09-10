@@ -1,21 +1,40 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:geocoding/geocoding.dart';
 
+import '../../../../app/injection_container.dart';
 import '../../../../core/services/admin_profile_storage.dart';
 import '../../../auth/data/models/admin_model.dart';
 import '../../../auth/domain/entities/admin_entity.dart';
+import '../../../auth/presentation/cubit/auth_cubit.dart';
+import '../../../auth/presentation/pages/login/login_page.dart';
 import '../../../home/presentation/pages/home_page.dart';
 import '../../../orders/presentation/pages/orders_page.dart';
 import '../../../products/presentation/pages/products_page.dart';
+import '../cubit/profile_cubit.dart';
+import '../cubit/profile_state.dart';
 import 'edit_profile_page.dart';
 
-class ProfilePage extends StatefulWidget {
+class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 
   @override
-  State<ProfilePage> createState() => _ProfilePageState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => sl<ProfileCubit>()..getProfile(),
+      child: const _ProfileView(),
+    );
+  }
 }
 
-class _ProfilePageState extends State<ProfilePage> {
+class _ProfileView extends StatefulWidget {
+  const _ProfileView();
+
+  @override
+  State<_ProfileView> createState() => _ProfileViewState();
+}
+
+class _ProfileViewState extends State<_ProfileView> {
   static const Color _orange = Color(0xFFFF821D);
   static const Color _background = Color(0xFFF7F8FA);
   static const Color _textPrimary = Color(0xFF20212B);
@@ -24,19 +43,15 @@ class _ProfilePageState extends State<ProfilePage> {
   final AdminProfileStorage _profileStorage = AdminProfileStorage();
 
   AdminModel? _admin;
-  bool _isLoading = true;
+  bool _isLoggingOut = false;
 
   @override
   void initState() {
     super.initState();
-    _loadProfile();
+    _loadCachedProfile();
   }
 
-  Future<void> _loadProfile() async {
-    setState(() {
-      _isLoading = true;
-    });
-
+  Future<void> _loadCachedProfile() async {
     final admin = await _profileStorage.get();
 
     if (!mounted) {
@@ -45,23 +60,88 @@ class _ProfilePageState extends State<ProfilePage> {
 
     setState(() {
       _admin = admin;
-      _isLoading = false;
     });
   }
 
-  Future<void> _onEditProfile() async {
-    final currentAdmin = _admin;
+  AdminModel _toModel(AdminEntity admin) {
+    return AdminModel(
+      id: admin.id,
+      name: admin.name,
+      email: admin.email,
+      phone: admin.phone,
+      nationalId: admin.nationalId,
+      businessName: admin.businessName,
+      address: admin.address,
+      latitude: admin.latitude,
+      longitude: admin.longitude,
+      commercialRegister: admin.commercialRegister,
+      taxCard: admin.taxCard,
+      picture: admin.picture,
+    );
+  }
 
-    if (currentAdmin == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Profile data is not available yet.'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+  Future<void> _persistAdmin(AdminEntity admin) async {
+    final model = _toModel(admin);
+
+    try {
+      await _profileStorage.save(model);
+    } catch (_) {
+      // نستمر بعرض البيانات الجديدة حتى لو فشل الحفظ محلياً.
+    }
+
+    if (!mounted) {
       return;
     }
 
+    setState(() {
+      _admin = model;
+    });
+  }
+
+  Future<void> _onLogout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: const Text('Log Out'),
+        content: const Text('Are you sure you want to log out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Log Out'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _isLoggingOut = true;
+    });
+
+    await sl<AuthCubit>().logoutAdmin();
+
+    if (!mounted) {
+      return;
+    }
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginPage()),
+      (route) => false,
+    );
+  }
+
+  Future<void> _onEditProfile(AdminEntity currentAdmin) async {
     final updatedAdmin = await Navigator.of(context).push<AdminEntity>(
       MaterialPageRoute(builder: (_) => EditProfilePage(admin: currentAdmin)),
     );
@@ -70,50 +150,18 @@ class _ProfilePageState extends State<ProfilePage> {
       return;
     }
 
-    final updatedAdminModel = AdminModel(
-      id: updatedAdmin.id,
-      name: updatedAdmin.name,
-      email: updatedAdmin.email,
-      phone: updatedAdmin.phone,
-      nationalId: updatedAdmin.nationalId,
-      businessName: updatedAdmin.businessName,
-      address: updatedAdmin.address,
-      latitude: updatedAdmin.latitude,
-      longitude: updatedAdmin.longitude,
-      commercialRegister: updatedAdmin.commercialRegister,
-      taxCard: updatedAdmin.taxCard,
-      picture: updatedAdmin.picture,
-    );
+    await _persistAdmin(updatedAdmin);
 
-    try {
-      await _profileStorage.save(updatedAdminModel);
-
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _admin = updatedAdminModel;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Profile updated successfully.'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    } catch (_) {
-      if (!mounted) {
-        return;
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Could not save your profile changes.'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+    if (!mounted) {
+      return;
     }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Profile updated successfully.'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   void _onBottomNavigationChanged(int index) {
@@ -146,16 +194,47 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _background,
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: _orange))
-          : _admin == null
-          ? _ProfileNotFoundView(onRetry: _loadProfile)
-          : _buildProfileContent(_admin!),
-      bottomNavigationBar: _ProfileBottomBar(
-        selectedIndex: 3,
-        onChanged: _onBottomNavigationChanged,
+    return BlocListener<ProfileCubit, ProfileState>(
+      listener: (context, state) {
+        if (state is ProfileLoaded) {
+          _persistAdmin(state.admin);
+          return;
+        }
+
+        if (state is ProfileFailure && _admin != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Could not refresh profile: ${state.message}'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      },
+      child: BlocBuilder<ProfileCubit, ProfileState>(
+        builder: (context, state) {
+          Widget body;
+
+          if (_admin != null) {
+            body = _buildProfileContent(_admin!);
+          } else if (state is ProfileFailure) {
+            body = _ProfileNotFoundView(
+              onRetry: () async => context.read<ProfileCubit>().getProfile(),
+            );
+          } else {
+            body = const Center(
+              child: CircularProgressIndicator(color: _orange),
+            );
+          }
+
+          return Scaffold(
+            backgroundColor: _background,
+            body: body,
+            bottomNavigationBar: _ProfileBottomBar(
+              selectedIndex: 3,
+              onChanged: _onBottomNavigationChanged,
+            ),
+          );
+        },
       ),
     );
   }
@@ -168,7 +247,7 @@ class _ProfilePageState extends State<ProfilePage> {
           Expanded(
             child: RefreshIndicator(
               color: _orange,
-              onRefresh: _loadProfile,
+              onRefresh: () async => context.read<ProfileCubit>().getProfile(),
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
                 children: [
@@ -217,9 +296,10 @@ class _ProfilePageState extends State<ProfilePage> {
                           value: _displayValue(admin.address),
                         ),
                         const SizedBox(height: 15),
-                        _ProfileInfoRow(
-                          label: 'Store Location',
-                          value: _locationText(admin),
+                        _StoreLocationRow(
+                          latitude: admin.latitude,
+                          longitude: admin.longitude,
+                          fallback: _locationText(admin),
                         ),
                       ],
                     ),
@@ -246,7 +326,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     height: 50,
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: _onEditProfile,
+                      onPressed: () => _onEditProfile(admin),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _orange,
                         foregroundColor: Colors.white,
@@ -257,6 +337,38 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                       child: const Text(
                         'Edit Profile',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 50,
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _isLoggingOut ? null : _onLogout,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        side: const BorderSide(color: Colors.red),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                      ),
+                      icon: _isLoggingOut
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.red,
+                              ),
+                            )
+                          : const Icon(Icons.logout_rounded),
+                      label: const Text(
+                        'Log Out',
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
@@ -535,6 +647,96 @@ class _ProfileInfoRow extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+/// يعرض اسم الموقع (عنوان مقروء) بدل خط الطول ودائرة العرض الخام،
+/// عبر تحويل الإحداثيات المحفوظة إلى عنوان في الخلفية.
+class _StoreLocationRow extends StatefulWidget {
+  const _StoreLocationRow({
+    required this.latitude,
+    required this.longitude,
+    required this.fallback,
+  });
+
+  final double? latitude;
+  final double? longitude;
+  final String fallback;
+
+  @override
+  State<_StoreLocationRow> createState() => _StoreLocationRowState();
+}
+
+class _StoreLocationRowState extends State<_StoreLocationRow> {
+  String? _address;
+  bool _isResolving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolveAddress();
+  }
+
+  @override
+  void didUpdateWidget(covariant _StoreLocationRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.latitude != widget.latitude ||
+        oldWidget.longitude != widget.longitude) {
+      _address = null;
+      _resolveAddress();
+    }
+  }
+
+  Future<void> _resolveAddress() async {
+    final latitude = widget.latitude;
+    final longitude = widget.longitude;
+
+    if (latitude == null || longitude == null) {
+      return;
+    }
+
+    setState(() => _isResolving = true);
+
+    try {
+      final placemarks = await Geocoding().placemarkFromCoordinates(
+        latitude,
+        longitude,
+      );
+
+      if (!mounted) return;
+
+      if (placemarks.isNotEmpty) {
+        final place = placemarks.first;
+        final parts = [
+          place.street,
+          place.subLocality,
+          place.locality,
+          place.administrativeArea,
+          place.country,
+        ].where((part) => part != null && part.trim().isNotEmpty).toList();
+
+        setState(() {
+          _address = parts.isNotEmpty ? parts.join('، ') : null;
+          _isResolving = false;
+        });
+        return;
+      }
+    } catch (_) {
+      // نتجاهل خطأ تحويل الإحداثيات للعنوان ونعرض الإحداثيات كحل بديل فقط.
+    }
+
+    if (!mounted) return;
+    setState(() => _isResolving = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final value = _isResolving
+        ? 'جارِ تحديد العنوان...'
+        : (_address ?? widget.fallback);
+
+    return _ProfileInfoRow(label: 'Store Location', value: value);
   }
 }
 

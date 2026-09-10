@@ -1,6 +1,11 @@
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../../../../core/constants/app_colors.dart';
+import '../../../../profile/presentation/pages/location_picker_page.dart';
 import '../../models/admin_registration_data.dart';
 import 'register_security_page.dart';
 
@@ -19,9 +24,13 @@ class _RegisterBusinessPageState extends State<RegisterBusinessPage> {
   late final TextEditingController _businessNameController;
   late final TextEditingController _addressController;
 
-  bool _commercialRegisterUploaded = false;
-  bool _taxCardUploaded = false;
-  bool _locationSelected = false;
+  PlatformFile? _commercialRegisterFile;
+  PlatformFile? _taxCardFile;
+
+  double? _latitude;
+  double? _longitude;
+  String? _locationAddress;
+  bool _isPickingDocument = false;
 
   @override
   void initState() {
@@ -35,14 +44,8 @@ class _RegisterBusinessPageState extends State<RegisterBusinessPage> {
       text: widget.registrationData.address,
     );
 
-    _commercialRegisterUploaded =
-        widget.registrationData.commercialRegister != null;
-
-    _taxCardUploaded = widget.registrationData.taxCard != null;
-
-    _locationSelected =
-        widget.registrationData.latitude != null &&
-        widget.registrationData.longitude != null;
+    _latitude = widget.registrationData.latitude;
+    _longitude = widget.registrationData.longitude;
   }
 
   @override
@@ -56,30 +59,64 @@ class _RegisterBusinessPageState extends State<RegisterBusinessPage> {
     return _businessNameController.text.trim().isNotEmpty;
   }
 
-  void _setStoreLocation() {
-    setState(() {
-      _locationSelected = true;
-    });
+  Future<void> _openLocationPicker() async {
+    final initialLocation = (_latitude != null && _longitude != null)
+        ? LatLng(_latitude!, _longitude!)
+        : null;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Store location set temporarily. Maps will be connected later.',
-        ),
-        backgroundColor: AppColors.primary,
+    final result = await Navigator.of(context).push<PickedLocation>(
+      MaterialPageRoute(
+        builder: (_) => LocationPickerPage(initialLocation: initialLocation),
       ),
     );
-  }
 
-  void _selectCommercialRegister() {
+    if (result == null || !mounted) return;
+
     setState(() {
-      _commercialRegisterUploaded = true;
+      _latitude = result.latitude;
+      _longitude = result.longitude;
+      _locationAddress = result.address;
     });
   }
 
-  void _selectTaxCard() {
+  Future<void> _pickDocument({required bool isCommercialRegister}) async {
+    setState(() => _isPickingDocument = true);
+
+    try {
+      final file = await FilePicker.pickFile(
+        type: FileType.custom,
+        // السيرفر بيرفض PDF لحقلي السجل التجاري/البطاقة الضريبية وبيطلب صورة
+        // بس (jpeg, png, jpg, gif, webp, bmp) - نفس القيد المطبق في تعديل البروفايل.
+        allowedExtensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'],
+      );
+
+      if (file == null || !mounted || file.path == null) return;
+
+      setState(() {
+        if (isCommercialRegister) {
+          _commercialRegisterFile = file;
+        } else {
+          _taxCardFile = file;
+        }
+      });
+    } catch (_) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to pick this file.')),
+      );
+    } finally {
+      if (mounted) setState(() => _isPickingDocument = false);
+    }
+  }
+
+  void _removeDocument({required bool isCommercialRegister}) {
     setState(() {
-      _taxCardUploaded = true;
+      if (isCommercialRegister) {
+        _commercialRegisterFile = null;
+      } else {
+        _taxCardFile = null;
+      }
     });
   }
 
@@ -93,8 +130,12 @@ class _RegisterBusinessPageState extends State<RegisterBusinessPage> {
     final updatedData = widget.registrationData.copyWith(
       businessName: _businessNameController.text.trim(),
       address: _addressController.text.trim(),
-      latitude: _locationSelected ? 30.0444 : null,
-      longitude: _locationSelected ? 31.2357 : null,
+      latitude: _latitude,
+      longitude: _longitude,
+      commercialRegister: _commercialRegisterFile?.path != null
+          ? File(_commercialRegisterFile!.path!)
+          : null,
+      taxCard: _taxCardFile?.path != null ? File(_taxCardFile!.path!) : null,
     );
 
     Navigator.of(context).push(
@@ -102,9 +143,6 @@ class _RegisterBusinessPageState extends State<RegisterBusinessPage> {
         builder: (_) => RegisterSecurityPage(registrationData: updatedData),
       ),
     );
-
-    // في الخطوة التالية سننتقل إلى RegisterSecurityPage
-    // ونمرر لها updatedData.
   }
 
   @override
@@ -187,8 +225,9 @@ class _RegisterBusinessPageState extends State<RegisterBusinessPage> {
                         ),
                         const SizedBox(height: 9),
                         _LocationPickerTile(
-                          isSelected: _locationSelected,
-                          onTap: _setStoreLocation,
+                          isSelected: _latitude != null && _longitude != null,
+                          label: _locationAddress,
+                          onTap: _openLocationPicker,
                         ),
                         const SizedBox(height: 18),
                         const _FieldLabel(
@@ -197,29 +236,32 @@ class _RegisterBusinessPageState extends State<RegisterBusinessPage> {
                         ),
                         const SizedBox(height: 9),
                         _DocumentPickerTile(
-                          isUploaded: _commercialRegisterUploaded,
-                          uploadedLabel: 'Commercial Register uploaded',
-                          emptyLabel: 'Upload Commercial Register',
-                          onTap: _selectCommercialRegister,
-                          onRemove: () {
-                            setState(() {
-                              _commercialRegisterUploaded = false;
-                            });
-                          },
+                          isUploaded: _commercialRegisterFile != null,
+                          uploadedLabel:
+                              _commercialRegisterFile?.name ??
+                              'Commercial Register uploaded',
+                          emptyLabel: _isPickingDocument
+                              ? 'Opening file picker...'
+                              : 'Upload Commercial Register',
+                          onTap: () =>
+                              _pickDocument(isCommercialRegister: true),
+                          onRemove: () =>
+                              _removeDocument(isCommercialRegister: true),
                         ),
                         const SizedBox(height: 18),
                         const _FieldLabel(label: 'Tax Card', optional: true),
                         const SizedBox(height: 9),
                         _DocumentPickerTile(
-                          isUploaded: _taxCardUploaded,
-                          uploadedLabel: 'Tax Card uploaded',
-                          emptyLabel: 'Upload Tax Card',
-                          onTap: _selectTaxCard,
-                          onRemove: () {
-                            setState(() {
-                              _taxCardUploaded = false;
-                            });
-                          },
+                          isUploaded: _taxCardFile != null,
+                          uploadedLabel:
+                              _taxCardFile?.name ?? 'Tax Card uploaded',
+                          emptyLabel: _isPickingDocument
+                              ? 'Opening file picker...'
+                              : 'Upload Tax Card',
+                          onTap: () =>
+                              _pickDocument(isCommercialRegister: false),
+                          onRemove: () =>
+                              _removeDocument(isCommercialRegister: false),
                         ),
                         const SizedBox(height: 28),
                         SizedBox(
@@ -334,10 +376,15 @@ class _FieldLabel extends StatelessWidget {
 }
 
 class _LocationPickerTile extends StatelessWidget {
-  const _LocationPickerTile({required this.isSelected, required this.onTap});
+  const _LocationPickerTile({
+    required this.isSelected,
+    required this.onTap,
+    this.label,
+  });
 
   final bool isSelected;
   final VoidCallback onTap;
+  final String? label;
 
   @override
   Widget build(BuildContext context) {
@@ -364,8 +411,9 @@ class _LocationPickerTile extends StatelessWidget {
             Expanded(
               child: Text(
                 isSelected
-                    ? 'Cairo, Egypt — location set'
+                    ? (label ?? 'Location set')
                     : 'Tap to set store location',
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: color,
                   fontSize: 14,

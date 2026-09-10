@@ -11,7 +11,7 @@ class ApiClient {
           connectTimeout: const Duration(seconds: 20),
           receiveTimeout: const Duration(seconds: 20),
           sendTimeout: const Duration(seconds: 20),
-          headers: const {
+          headers: {
             'Accept': 'application/json',
             'x-api-key': ApiConstants.apiKey,
           },

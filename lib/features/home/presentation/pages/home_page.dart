@@ -1,19 +1,37 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../app/injection_container.dart';
 import '../../../../core/services/admin_profile_storage.dart';
 import '../../../auth/data/models/admin_model.dart';
+import '../../../orders/domain/entities/order_entity.dart';
 import '../../../orders/presentation/pages/orders_page.dart';
+import '../../../products/domain/entities/product_entity.dart';
 import '../../../products/presentation/pages/products_page.dart';
 import '../../../profile/presentation/pages/profile_page.dart';
+import '../cubit/home_cubit.dart';
+import '../cubit/home_state.dart';
 
-class HomePage extends StatefulWidget {
+class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => sl<HomeCubit>()..loadDashboard(),
+      child: const _HomeView(),
+    );
+  }
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomeView extends StatefulWidget {
+  const _HomeView();
+
+  @override
+  State<_HomeView> createState() => _HomeViewState();
+}
+
+class _HomeViewState extends State<_HomeView> {
   int _selectedIndex = 0;
   AdminModel? _admin;
   bool _isLoadingProfile = true;
@@ -85,69 +103,62 @@ class _HomePageState extends State<HomePage> {
               children: [
                 _Header(admin: _admin, isLoading: _isLoadingProfile),
                 Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 92),
-                    child: Column(
-                      children: [
-                        Transform.translate(
-                          offset: const Offset(0, -1),
-                          child: const _StatsCard(),
-                        ),
-                        const SizedBox(height: 20),
-                        const _SectionTitle(title: 'Quick Actions'),
-                        const SizedBox(height: 12),
-                        const _QuickActions(),
-                        const SizedBox(height: 22),
-                        _SectionTitle(
-                          title: 'Recent Orders',
-                          action: 'See all',
-                          onAction: () {
-                            Navigator.of(context).pushReplacement(
-                              MaterialPageRoute(
-                                builder: (_) => const OrdersPage(),
-                              ),
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 11),
-                        const _OrderCard(
-                          order: '#567ITDSD',
-                          customer: 'Sarah Mitchell',
-                          price: '687',
-                        ),
-                        const SizedBox(height: 11),
-                        const _OrderCard(
-                          order: '#891KLFPR',
-                          customer: 'Omar Hassan',
-                          price: '599',
-                        ),
-                        const SizedBox(height: 22),
-                        _SectionTitle(
-                          title: 'Products Overview',
-                          action: 'See all',
-                          onAction: () {
-                            Navigator.of(context).pushReplacement(
-                              MaterialPageRoute(
-                                builder: (_) => const ProductsPage(),
-                              ),
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 11),
-                        const _ProductCard(
-                          title: 'Wireless Headphones',
-                          subtitle: '299 · Qty 45',
-                          icon: Icons.headphones_rounded,
-                          iconBackground: Color(0xFFFFD94A),
-                        ),
-                        const SizedBox(height: 11),
-                        const _ProductCard(
-                          title: 'Smart Watch',
-                          subtitle: '799 · Qty 18',
-                          icon: Icons.watch_outlined,
-                          iconBackground: Color(0xFFEFEFEF),
-                        ),
-                      ],
+                  child: RefreshIndicator(
+                    color: orange,
+                    onRefresh: () => context.read<HomeCubit>().loadDashboard(),
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 92),
+                      child: Column(
+                        children: [
+                          Transform.translate(
+                            offset: const Offset(0, -1),
+                            child: BlocBuilder<HomeCubit, HomeState>(
+                              builder: (context, state) {
+                                return _StatsCard(state: state);
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          const _SectionTitle(title: 'Quick Actions'),
+                          const SizedBox(height: 12),
+                          const _QuickActions(),
+                          const SizedBox(height: 22),
+                          BlocBuilder<HomeCubit, HomeState>(
+                            builder: (context, state) {
+                              return _RecentOrdersSection(
+                                state: state,
+                                onSeeAll: () {
+                                  Navigator.of(context).pushReplacement(
+                                    MaterialPageRoute(
+                                      builder: (_) => const OrdersPage(),
+                                    ),
+                                  );
+                                },
+                                onRetry: () =>
+                                    context.read<HomeCubit>().loadDashboard(),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 22),
+                          BlocBuilder<HomeCubit, HomeState>(
+                            builder: (context, state) {
+                              return _ProductsOverviewSection(
+                                state: state,
+                                onSeeAll: () {
+                                  Navigator.of(context).pushReplacement(
+                                    MaterialPageRoute(
+                                      builder: (_) => const ProductsPage(),
+                                    ),
+                                  );
+                                },
+                                onRetry: () =>
+                                    context.read<HomeCubit>().loadDashboard(),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -221,7 +232,7 @@ class _Header extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
       decoration: const BoxDecoration(
-        color: _HomePageState.orange,
+        color: _HomeViewState.orange,
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       child: Row(
@@ -376,7 +387,7 @@ class _ProfileAvatar extends StatelessWidget {
                 height: 18,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: _HomePageState.orange,
+                  color: _HomeViewState.orange,
                 ),
               ),
             )
@@ -406,7 +417,7 @@ class _InitialsAvatar extends StatelessWidget {
       child: Text(
         initials,
         style: const TextStyle(
-          color: _HomePageState.orange,
+          color: _HomeViewState.orange,
           fontSize: 16,
           fontWeight: FontWeight.w800,
         ),
@@ -416,10 +427,14 @@ class _InitialsAvatar extends StatelessWidget {
 }
 
 class _StatsCard extends StatelessWidget {
-  const _StatsCard();
+  const _StatsCard({required this.state});
+
+  final HomeState state;
 
   @override
   Widget build(BuildContext context) {
+    final loaded = state is HomeLoaded ? state as HomeLoaded : null;
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -434,51 +449,51 @@ class _StatsCard extends StatelessWidget {
           ),
         ],
       ),
-      child: const Column(
+      child: Column(
         children: [
           Row(
             children: [
               Expanded(
                 child: _Stat(
-                  value: '4',
+                  value: _statValue(loaded?.totalProducts),
                   label: 'Total Products',
                   icon: Icons.inventory_2_outlined,
-                  iconColor: Color(0xFFFF7620),
-                  background: Color(0xFFFFF5ED),
+                  iconColor: const Color(0xFFFF7620),
+                  background: const Color(0xFFFFF5ED),
                 ),
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Expanded(
                 child: _Stat(
-                  value: '2',
+                  value: _statValue(loaded?.totalOrders),
                   label: 'Total Orders',
                   icon: Icons.shopping_bag_outlined,
-                  iconColor: Color(0xFF3779E8),
-                  background: Color(0xFFF0F5FF),
+                  iconColor: const Color(0xFF3779E8),
+                  background: const Color(0xFFF0F5FF),
                 ),
               ),
             ],
           ),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
                 child: _Stat(
-                  value: '2',
+                  value: _statValue(loaded?.pendingOrders),
                   label: 'Pending Orders',
                   icon: Icons.access_time_rounded,
-                  iconColor: Color(0xFFEBA500),
-                  background: Color(0xFFFFFBEA),
+                  iconColor: const Color(0xFFEBA500),
+                  background: const Color(0xFFFFFBEA),
                 ),
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Expanded(
                 child: _Stat(
-                  value: '3',
+                  value: _statValue(loaded?.totalCategories),
                   label: 'Categories',
                   icon: Icons.sell_outlined,
-                  iconColor: Color(0xFF13A978),
-                  background: Color(0xFFEAFBF4),
+                  iconColor: const Color(0xFF13A978),
+                  background: const Color(0xFFEAFBF4),
                 ),
               ),
             ],
@@ -486,6 +501,18 @@ class _StatsCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _statValue(int? value) {
+    if (state is HomeFailure) {
+      return '!';
+    }
+
+    if (value == null) {
+      return '--';
+    }
+
+    return value.toString();
   }
 }
 
@@ -524,7 +551,7 @@ class _Stat extends StatelessWidget {
               Text(
                 value,
                 style: const TextStyle(
-                  color: _HomePageState.dark,
+                  color: _HomeViewState.dark,
                   fontSize: 20,
                   fontWeight: FontWeight.w800,
                 ),
@@ -532,7 +559,7 @@ class _Stat extends StatelessWidget {
               Text(
                 label,
                 style: const TextStyle(
-                  color: _HomePageState.grey,
+                  color: _HomeViewState.grey,
                   fontSize: 9.5,
                 ),
               ),
@@ -558,7 +585,7 @@ class _SectionTitle extends StatelessWidget {
         Text(
           title,
           style: const TextStyle(
-            color: _HomePageState.dark,
+            color: _HomeViewState.dark,
             fontSize: 15,
             fontWeight: FontWeight.w800,
           ),
@@ -570,7 +597,7 @@ class _SectionTitle extends StatelessWidget {
             child: Text(
               action!,
               style: const TextStyle(
-                color: _HomePageState.orange,
+                color: _HomeViewState.orange,
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
               ),
@@ -597,7 +624,7 @@ class _QuickActions extends StatelessWidget {
               label: const Text('Add Product'),
               style: ElevatedButton.styleFrom(
                 elevation: 0,
-                backgroundColor: _HomePageState.orange,
+                backgroundColor: _HomeViewState.orange,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(15),
@@ -620,7 +647,7 @@ class _QuickActions extends StatelessWidget {
               label: const Text('Categories'),
               style: OutlinedButton.styleFrom(
                 backgroundColor: const Color(0xFFFFF7F1),
-                foregroundColor: _HomePageState.orange,
+                foregroundColor: _HomeViewState.orange,
                 side: const BorderSide(color: Color(0xFFFFDDC5)),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(15),
@@ -638,19 +665,119 @@ class _QuickActions extends StatelessWidget {
   }
 }
 
-class _OrderCard extends StatelessWidget {
-  const _OrderCard({
-    required this.order,
-    required this.customer,
-    required this.price,
+class _RecentOrdersSection extends StatelessWidget {
+  const _RecentOrdersSection({
+    required this.state,
+    required this.onSeeAll,
+    required this.onRetry,
   });
 
-  final String order;
-  final String customer;
-  final String price;
+  final HomeState state;
+  final VoidCallback onSeeAll;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionTitle(
+          title: 'Recent Orders',
+          action: 'See all',
+          onAction: onSeeAll,
+        ),
+        const SizedBox(height: 11),
+        _buildBody(),
+      ],
+    );
+  }
+
+  Widget _buildBody() {
+    if (state is HomeInitial || state is HomeLoading) {
+      return const _DashboardSectionLoading();
+    }
+
+    if (state is HomeFailure) {
+      return _DashboardSectionError(
+        message: (state as HomeFailure).message,
+        onRetry: onRetry,
+      );
+    }
+
+    final orders = (state as HomeLoaded).recentOrders;
+
+    if (orders.isEmpty) {
+      return const _DashboardSectionEmpty(message: 'No orders yet.');
+    }
+
+    return Column(
+      children: [
+        for (var i = 0; i < orders.length; i++) ...[
+          if (i > 0) const SizedBox(height: 11),
+          _OrderCard(order: orders[i]),
+        ],
+      ],
+    );
+  }
+}
+
+class _OrderCard extends StatelessWidget {
+  const _OrderCard({required this.order});
+
+  final OrderEntity order;
+
+  String _formatPrice(double value) {
+    if (value == value.roundToDouble()) {
+      return value.toStringAsFixed(0);
+    }
+
+    return value.toStringAsFixed(2);
+  }
+
+  String _capitalize(String value) {
+    final trimmed = value.trim();
+
+    if (trimmed.isEmpty) {
+      return 'Unknown';
+    }
+
+    return '${trimmed[0].toUpperCase()}${trimmed.substring(1)}';
+  }
+
+  _OrderStatusStyle _statusStyle(String status) {
+    final value = status.trim().toLowerCase();
+
+    if (value.contains('complete') || value.contains('deliver')) {
+      return const _OrderStatusStyle(
+        color: Color(0xFF13A978),
+        backgroundColor: Color(0xFFEAFBF4),
+      );
+    }
+
+    if (value.contains('cancel') || value.contains('reject')) {
+      return const _OrderStatusStyle(
+        color: Color(0xFFE84B4B),
+        backgroundColor: Color(0xFFFFEEEE),
+      );
+    }
+
+    if (value.contains('process') || value.contains('ship')) {
+      return const _OrderStatusStyle(
+        color: Color(0xFF4776E6),
+        backgroundColor: Color(0xFFEEF3FF),
+      );
+    }
+
+    return const _OrderStatusStyle(
+      color: Color(0xFFE89B17),
+      backgroundColor: Color(0xFFFFF8E8),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final statusStyle = _statusStyle(order.status);
+
     return Container(
       height: 78,
       padding: const EdgeInsets.symmetric(horizontal: 15),
@@ -669,7 +796,7 @@ class _OrderCard extends StatelessWidget {
             ),
             child: const Icon(
               Icons.shopping_bag_outlined,
-              color: _HomePageState.orange,
+              color: _HomeViewState.orange,
               size: 20,
             ),
           ),
@@ -680,18 +807,22 @@ class _OrderCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  order,
+                  order.code,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    color: _HomePageState.dark,
+                    color: _HomeViewState.dark,
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  customer,
+                  order.customerName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    color: _HomePageState.grey,
+                    color: _HomeViewState.grey,
                     fontSize: 12,
                   ),
                 ),
@@ -705,18 +836,18 @@ class _OrderCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFFBEA),
+                  color: statusStyle.backgroundColor,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.circle, color: Color(0xFFF3B000), size: 6),
-                    SizedBox(width: 4),
+                    Icon(Icons.circle, color: statusStyle.color, size: 6),
+                    const SizedBox(width: 4),
                     Text(
-                      'Pending',
+                      _capitalize(order.status),
                       style: TextStyle(
-                        color: Color(0xFFEBA500),
+                        color: statusStyle.color,
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
                       ),
@@ -726,9 +857,9 @@ class _OrderCard extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                price,
+                _formatPrice(order.total),
                 style: const TextStyle(
-                  color: _HomePageState.orange,
+                  color: _HomeViewState.orange,
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
                 ),
@@ -741,21 +872,93 @@ class _OrderCard extends StatelessWidget {
   }
 }
 
-class _ProductCard extends StatelessWidget {
-  const _ProductCard({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.iconBackground,
+class _OrderStatusStyle {
+  const _OrderStatusStyle({required this.color, required this.backgroundColor});
+
+  final Color color;
+  final Color backgroundColor;
+}
+
+class _ProductsOverviewSection extends StatelessWidget {
+  const _ProductsOverviewSection({
+    required this.state,
+    required this.onSeeAll,
+    required this.onRetry,
   });
 
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final Color iconBackground;
+  final HomeState state;
+  final VoidCallback onSeeAll;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionTitle(
+          title: 'Products Overview',
+          action: 'See all',
+          onAction: onSeeAll,
+        ),
+        const SizedBox(height: 11),
+        _buildBody(),
+      ],
+    );
+  }
+
+  Widget _buildBody() {
+    if (state is HomeInitial || state is HomeLoading) {
+      return const _DashboardSectionLoading();
+    }
+
+    if (state is HomeFailure) {
+      return _DashboardSectionError(
+        message: (state as HomeFailure).message,
+        onRetry: onRetry,
+      );
+    }
+
+    final products = (state as HomeLoaded).productsOverview;
+
+    if (products.isEmpty) {
+      return const _DashboardSectionEmpty(message: 'No products yet.');
+    }
+
+    return Column(
+      children: [
+        for (var i = 0; i < products.length; i++) ...[
+          if (i > 0) const SizedBox(height: 11),
+          _ProductCard(product: products[i], index: i),
+        ],
+      ],
+    );
+  }
+}
+
+class _ProductCard extends StatelessWidget {
+  const _ProductCard({required this.product, required this.index});
+
+  final ProductEntity product;
+  final int index;
+
+  static const List<Color> _iconBackgrounds = [
+    Color(0xFFFFD94A),
+    Color(0xFFEFEFEF),
+    Color(0xFFCFE8FF),
+  ];
+
+  String _formatPrice(double value) {
+    if (value == value.roundToDouble()) {
+      return value.toStringAsFixed(0);
+    }
+
+    return value.toStringAsFixed(2);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final iconBackground = _iconBackgrounds[index % _iconBackgrounds.length];
+
     return Container(
       height: 74,
       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -772,7 +975,11 @@ class _ProductCard extends StatelessWidget {
               color: iconBackground,
               borderRadius: BorderRadius.circular(14),
             ),
-            child: Icon(icon, color: const Color(0xFF29240B), size: 28),
+            child: const Icon(
+              Icons.inventory_2_outlined,
+              color: Color(0xFF29240B),
+              size: 28,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -781,18 +988,20 @@ class _ProductCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  title,
+                  product.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    color: _HomePageState.dark,
+                    color: _HomeViewState.dark,
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  subtitle,
+                  '${_formatPrice(product.price)} · Qty ${product.quantity}',
                   style: const TextStyle(
-                    color: _HomePageState.grey,
+                    color: _HomeViewState.grey,
                     fontSize: 12,
                   ),
                 ),
@@ -802,23 +1011,114 @@ class _ProductCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
             decoration: BoxDecoration(
-              color: const Color(0xFFEAFBF4),
+              color: product.visible
+                  ? const Color(0xFFEAFBF4)
+                  : const Color(0xFFF0F0F0),
               borderRadius: BorderRadius.circular(11),
             ),
-            child: const Row(
+            child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.circle, color: Color(0xFF13B982), size: 6),
-                SizedBox(width: 4),
+                Icon(
+                  Icons.circle,
+                  color: product.visible
+                      ? const Color(0xFF13B982)
+                      : _HomeViewState.grey,
+                  size: 6,
+                ),
+                const SizedBox(width: 4),
                 Text(
-                  'Visible',
+                  product.visible ? 'Visible' : 'Hidden',
                   style: TextStyle(
-                    color: Color(0xFF13A978),
+                    color: product.visible
+                        ? const Color(0xFF13A978)
+                        : _HomeViewState.grey,
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DashboardSectionLoading extends StatelessWidget {
+  const _DashboardSectionLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 20),
+      child: Center(
+        child: SizedBox(
+          width: 22,
+          height: 22,
+          child: CircularProgressIndicator(
+            strokeWidth: 2.4,
+            color: _HomeViewState.orange,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DashboardSectionEmpty extends StatelessWidget {
+  const _DashboardSectionEmpty({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 22),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        message,
+        style: const TextStyle(color: _HomeViewState.grey, fontSize: 13),
+      ),
+    );
+  }
+}
+
+class _DashboardSectionError extends StatelessWidget {
+  const _DashboardSectionError({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: _HomeViewState.dark, fontSize: 13),
+          ),
+          const SizedBox(height: 10),
+          TextButton(
+            onPressed: onRetry,
+            style: TextButton.styleFrom(foregroundColor: _HomeViewState.orange),
+            child: const Text(
+              'Try again',
+              style: TextStyle(fontWeight: FontWeight.w700),
             ),
           ),
         ],
@@ -868,7 +1168,7 @@ class _BottomBar extends StatelessWidget {
                   Icon(
                     selected ? item.$2 : item.$1,
                     color: selected
-                        ? _HomePageState.orange
+                        ? _HomeViewState.orange
                         : const Color(0xFF9699A5),
                     size: 23,
                   ),
@@ -877,7 +1177,7 @@ class _BottomBar extends StatelessWidget {
                     item.$3,
                     style: TextStyle(
                       color: selected
-                          ? _HomePageState.orange
+                          ? _HomeViewState.orange
                           : const Color(0xFF9699A5),
                       fontSize: 11,
                       fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
@@ -889,7 +1189,7 @@ class _BottomBar extends StatelessWidget {
                     width: selected ? 28 : 0,
                     height: 2,
                     decoration: BoxDecoration(
-                      color: _HomePageState.orange,
+                      color: _HomeViewState.orange,
                       borderRadius: BorderRadius.circular(5),
                     ),
                   ),

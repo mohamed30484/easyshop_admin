@@ -1,3 +1,6 @@
+# Environment variables (API keys / base URLs) — never commit real secrets
+.env
+
 # Miscellaneous
 *.class
 *.log

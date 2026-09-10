@@ -1,10 +1,14 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../../../core/constants/app_colors.dart';
 import '../../cubit/auth_cubit.dart';
 import '../../cubit/auth_state.dart';
 import '../../models/admin_registration_data.dart';
+import '../login/login_page.dart';
 
 class RegisterSecurityPage extends StatefulWidget {
   const RegisterSecurityPage({super.key, required this.registrationData});
@@ -20,10 +24,11 @@ class _RegisterSecurityPageState extends State<RegisterSecurityPage> {
 
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _imagePicker = ImagePicker();
 
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
-  bool _pictureSelected = false;
+  XFile? _selectedImage;
 
   @override
   void dispose() {
@@ -37,10 +42,77 @@ class _RegisterSecurityPageState extends State<RegisterSecurityPage> {
         _confirmPasswordController.text.isNotEmpty;
   }
 
-  void _selectProfilePicture() {
-    setState(() {
-      _pictureSelected = true;
-    });
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final image = await _imagePicker.pickImage(
+        source: source,
+        imageQuality: 80,
+      );
+
+      if (image == null || !mounted) return;
+
+      setState(() => _selectedImage = image);
+    } catch (_) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to pick this image.')),
+      );
+    }
+  }
+
+  void _showImageSourceSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+            child: Wrap(
+              children: [
+                const Center(
+                  child: Text(
+                    'Upload photo',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ListTile(
+                  leading: const Icon(
+                    Icons.photo_library_outlined,
+                    color: AppColors.primary,
+                  ),
+                  title: const Text('Choose from gallery'),
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    _pickImage(ImageSource.gallery);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(
+                    Icons.camera_alt_outlined,
+                    color: AppColors.primary,
+                  ),
+                  title: const Text('Take a photo'),
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    _pickImage(ImageSource.camera);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   void _createAccount() {
@@ -53,6 +125,7 @@ class _RegisterSecurityPageState extends State<RegisterSecurityPage> {
     final registrationData = widget.registrationData.copyWith(
       password: _passwordController.text,
       passwordConfirmation: _confirmPasswordController.text,
+      picture: _selectedImage != null ? File(_selectedImage!.path) : null,
     );
 
     context.read<AuthCubit>().registerAdmin(registrationData);
@@ -66,14 +139,17 @@ class _RegisterSecurityPageState extends State<RegisterSecurityPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text(
-                'Account created successfully. Please verify your OTP.',
+                'Account created successfully. Please log in.',
               ),
               backgroundColor: AppColors.success,
             ),
           );
 
-          // بعد إنشاء صفحة OTP سننتقل إليها من هنا.
-          // Navigator.of(context).pushReplacement(...);
+          // يرجع لصفحة اللوجن ويمسح كل خطوات التسجيل من الـ stack.
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const LoginPage()),
+            (route) => false,
+          );
         }
 
         if (state is AuthFailure) {
@@ -138,8 +214,10 @@ class _RegisterSecurityPageState extends State<RegisterSecurityPage> {
                           ),
                           const SizedBox(height: 12),
                           _ProfilePicturePicker(
-                            isSelected: _pictureSelected,
-                            onTap: _selectProfilePicture,
+                            imageFile: _selectedImage != null
+                                ? File(_selectedImage!.path)
+                                : null,
+                            onTap: _showImageSourceSheet,
                           ),
                           const SizedBox(height: 24),
                           const _FieldLabel(label: 'Password'),
@@ -291,13 +369,15 @@ class _RegisterSecurityPageState extends State<RegisterSecurityPage> {
 }
 
 class _ProfilePicturePicker extends StatelessWidget {
-  const _ProfilePicturePicker({required this.isSelected, required this.onTap});
+  const _ProfilePicturePicker({required this.imageFile, required this.onTap});
 
-  final bool isSelected;
+  final File? imageFile;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final isSelected = imageFile != null;
+
     return Row(
       children: [
         InkWell(
@@ -314,11 +394,20 @@ class _ProfilePicturePicker extends StatelessWidget {
                 width: isSelected ? 1.5 : 1,
               ),
             ),
-            child: Icon(
-              isSelected ? Icons.check_rounded : Icons.camera_alt_outlined,
-              color: isSelected ? AppColors.primary : AppColors.textSecondary,
-              size: 25,
-            ),
+            child: isSelected
+                ? ClipOval(
+                    child: Image.file(
+                      imageFile!,
+                      width: 64,
+                      height: 64,
+                      fit: BoxFit.cover,
+                    ),
+                  )
+                : const Icon(
+                    Icons.camera_alt_outlined,
+                    color: AppColors.textSecondary,
+                    size: 25,
+                  ),
           ),
         ),
         const SizedBox(width: 16),

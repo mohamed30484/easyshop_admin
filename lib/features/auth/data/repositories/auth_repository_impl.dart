@@ -86,6 +86,21 @@ class AuthRepositoryImpl implements AuthRepository {
     }
   }
 
+  @override
+  Future<Either<Failure, void>> logoutAdmin() async {
+    try {
+      await _remoteDataSource.logoutAdmin();
+
+      return const Right(null);
+    } on DioException catch (error) {
+      return Left(ServerFailure(message: _getDioErrorMessage(error)));
+    } catch (_) {
+      return Left(
+        ServerFailure(message: 'Something went wrong. Please try again.'),
+      );
+    }
+  }
+
   String _getDioErrorMessage(DioException error) {
     final data = error.response?.data;
 

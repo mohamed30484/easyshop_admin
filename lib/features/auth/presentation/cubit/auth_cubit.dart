@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/services/admin_profile_storage.dart';
 import '../../data/models/admin_model.dart';
 import '../../domain/usecases/login_admin_usecase.dart';
+import '../../domain/usecases/logout_admin_usecase.dart';
 import '../../domain/usecases/register_admin_usecase.dart';
 import '../../domain/usecases/resend_otp_admin_usecase.dart';
 import '../../domain/usecases/verify_otp_admin_usecase.dart';
@@ -17,12 +18,14 @@ class AuthCubit extends Cubit<AuthState> {
     this._loginAdminUseCase,
     this._verifyOtpAdminUseCase,
     this._resendOtpAdminUseCase,
+    this._logoutAdminUseCase,
   ) : super(const AuthInitial());
 
   final RegisterAdminUseCase _registerAdminUseCase;
   final LoginAdminUseCase _loginAdminUseCase;
   final VerifyOtpAdminUseCase _verifyOtpAdminUseCase;
   final ResendOtpAdminUseCase _resendOtpAdminUseCase;
+  final LogoutAdminUseCase _logoutAdminUseCase;
 
   final AdminProfileStorage _profileStorage = AdminProfileStorage();
 
@@ -155,6 +158,29 @@ class AuthCubit extends Cubit<AuthState> {
     } catch (error) {
       emit(AuthFailure(message: error.toString()));
     }
+  }
+
+  /// ينهي جلسة الأدمن محلياً دايماً (توكن + بيانات بروفايل محفوظة)
+  /// حتى لو نداء تسجيل الخروج على السيرفر فشل (مفيش إنترنت مثلاً)،
+  /// عشان المستخدم يقدر يخرج من حسابه في كل الأحوال.
+  Future<void> logoutAdmin() async {
+    emit(const AuthLoading());
+
+    try {
+      await _logoutAdminUseCase();
+    } catch (_) {
+      // نتجاهل فشل نداء السيرفر ونكمل مسح الجلسة محلياً.
+    }
+
+    await _clearLocalSession();
+
+    emit(const AuthLogoutSuccess());
+  }
+
+  Future<void> _clearLocalSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('admin_token');
+    await _profileStorage.clear();
   }
 
   String _getDioErrorMessage(DioException error) {

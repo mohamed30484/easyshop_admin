@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 
 import '../../../../core/constants/api_constants.dart';
@@ -16,6 +18,8 @@ abstract class AuthRemoteDataSource {
   });
 
   Future<void> resendOtpAdmin({required String email});
+
+  Future<void> logoutAdmin();
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -43,6 +47,36 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         'longitude': registrationData.longitude,
     });
 
+    if (registrationData.picture != null) {
+      formData.files.add(
+        MapEntry(
+          'picture',
+          await _attachFile('picture', registrationData.picture!.path),
+        ),
+      );
+    }
+
+    if (registrationData.commercialRegister != null) {
+      formData.files.add(
+        MapEntry(
+          'commercial_register',
+          await _attachFile(
+            'commercial_register',
+            registrationData.commercialRegister!.path,
+          ),
+        ),
+      );
+    }
+
+    if (registrationData.taxCard != null) {
+      formData.files.add(
+        MapEntry(
+          'tax_card',
+          await _attachFile('tax_card', registrationData.taxCard!.path),
+        ),
+      );
+    }
+
     final response = await _apiClient.dio.post(
       ApiConstants.adminRegister,
       data: formData,
@@ -57,6 +91,23 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     }
 
     throw const FormatException('Unexpected register response format.');
+  }
+
+  /// يتأكد إن الملف المختار لسه موجود فعليًا على الجهاز قبل ما يحاول يرفعه، ويدي
+  /// رسالة خطأ واضحة فيها اسم الحقل لو حصل أي خطأ في القراءة (نفس نمط تحديث
+  /// البروفايل في `profile_remote_data_source.dart`).
+  Future<MultipartFile> _attachFile(String fieldName, String path) async {
+    final file = File(path);
+
+    if (!await file.exists()) {
+      throw Exception('Selected $fieldName file no longer exists at: $path');
+    }
+
+    try {
+      return await MultipartFile.fromFile(path);
+    } catch (error) {
+      throw Exception('Failed to read $fieldName file ($path): $error');
+    }
   }
 
   @override
@@ -98,6 +149,11 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       data: {'email': email},
       options: Options(contentType: Headers.jsonContentType),
     );
+  }
+
+  @override
+  Future<void> logoutAdmin() async {
+    await _apiClient.dio.post(ApiConstants.adminLogout);
   }
 
   Map<String, dynamic> _extractAdminJson(Map<String, dynamic> responseData) {

@@ -28,6 +28,51 @@ class _RegisterPersonalPageState extends State<RegisterPersonalPage> {
     super.dispose();
   }
 
+  /// يتحقق من شكل الرقم القومي المصري بالكامل (مش بس إنه 14 رقم) قبل ما نبعته
+  /// للسيرفر عشان نمسك الأخطاء الشائعة (زي قرن أو شهر/يوم غلط) قبل ما توصل
+  /// للسيرفر ويرجع رسالة "national_id field format is invalid".
+  String? _validateNationalId(String? value) {
+    final nationalId = value?.trim() ?? '';
+
+    if (nationalId.isEmpty) {
+      return 'Please enter your national ID';
+    }
+
+    if (!RegExp(r'^\d{14}$').hasMatch(nationalId)) {
+      return 'National ID must be 14 digits';
+    }
+
+    final centuryDigit = nationalId[0];
+    if (centuryDigit != '2' && centuryDigit != '3') {
+      return 'National ID must start with 2 (1900s) or 3 (2000s)';
+    }
+
+    final century = centuryDigit == '2' ? 1900 : 2000;
+    final year = century + int.parse(nationalId.substring(1, 3));
+    final month = int.parse(nationalId.substring(3, 5));
+    final day = int.parse(nationalId.substring(5, 7));
+
+    if (month < 1 || month > 12) {
+      return 'National ID has an invalid birth month';
+    }
+
+    try {
+      final birthDate = DateTime(year, month, day);
+      final isValidDay =
+          birthDate.year == year &&
+          birthDate.month == month &&
+          birthDate.day == day;
+
+      if (!isValidDay) {
+        return 'National ID has an invalid birth date';
+      }
+    } catch (_) {
+      return 'National ID has an invalid birth date';
+    }
+
+    return null;
+  }
+
   void _continue() {
     FocusScope.of(context).unfocus();
 
@@ -165,25 +210,13 @@ class _RegisterPersonalPageState extends State<RegisterPersonalPage> {
                         const SizedBox(height: 18),
                         AppTextField(
                           label: 'National ID',
-                          hint: '14-digit national ID',
+                          hint: 'e.g. 29001011234567',
                           controller: _nationalIdController,
                           keyboardType: TextInputType.number,
                           textInputAction: TextInputAction.done,
                           maxLength: 14,
                           onFieldSubmitted: (_) => _continue(),
-                          validator: (value) {
-                            final nationalId = value?.trim() ?? '';
-
-                            if (nationalId.isEmpty) {
-                              return 'Please enter your national ID';
-                            }
-
-                            if (!RegExp(r'^\d{14}$').hasMatch(nationalId)) {
-                              return 'National ID must be 14 digits';
-                            }
-
-                            return null;
-                          },
+                          validator: _validateNationalId,
                         ),
                         const SizedBox(height: 28),
                         SizedBox(

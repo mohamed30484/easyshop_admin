@@ -6,6 +6,7 @@ import '../features/auth/data/datasources/auth_remote_data_source.dart';
 import '../features/auth/data/repositories/auth_repository_impl.dart';
 import '../features/auth/domain/repositories/auth_repository.dart';
 import '../features/auth/domain/usecases/login_admin_usecase.dart';
+import '../features/auth/domain/usecases/logout_admin_usecase.dart';
 import '../features/auth/domain/usecases/register_admin_usecase.dart';
 import '../features/auth/domain/usecases/resend_otp_admin_usecase.dart';
 import '../features/auth/domain/usecases/verify_otp_admin_usecase.dart';
@@ -19,6 +20,8 @@ import '../features/categories/domain/usecases/delete_category_usecase.dart';
 import '../features/categories/domain/usecases/get_categories_usecase.dart';
 import '../features/categories/domain/usecases/update_category_usecase.dart';
 import '../features/categories/presentation/cubit/categories_cubit.dart';
+
+import '../features/home/presentation/cubit/home_cubit.dart';
 
 import '../features/orders/data/datasources/orders_remote_data_source.dart';
 import '../features/orders/data/repositories/orders_repository_impl.dart';
@@ -34,6 +37,13 @@ import '../features/products/domain/usecases/delete_product_usecase.dart';
 import '../features/products/domain/usecases/get_products_usecase.dart';
 import '../features/products/domain/usecases/update_product_usecase.dart';
 import '../features/products/presentation/cubit/products_cubit.dart';
+
+import '../features/profile/data/datasources/profile_remote_data_source.dart';
+import '../features/profile/data/repositories/profile_repository_impl.dart';
+import '../features/profile/domain/repositories/profile_repository.dart';
+import '../features/profile/domain/usecases/get_profile_usecase.dart';
+import '../features/profile/domain/usecases/update_profile_usecase.dart';
+import '../features/profile/presentation/cubit/profile_cubit.dart';
 
 final sl = GetIt.instance;
 
@@ -67,6 +77,10 @@ Future<void> setupDependencies() async {
     () => ResendOtpAdminUseCase(sl<AuthRepository>()),
   );
 
+  sl.registerLazySingleton<LogoutAdminUseCase>(
+    () => LogoutAdminUseCase(sl<AuthRepository>()),
+  );
+
   // Auth - Presentation
   sl.registerFactory<AuthCubit>(
     () => AuthCubit(
@@ -74,6 +88,7 @@ Future<void> setupDependencies() async {
       sl<LoginAdminUseCase>(),
       sl<VerifyOtpAdminUseCase>(),
       sl<ResendOtpAdminUseCase>(),
+      sl<LogoutAdminUseCase>(),
     ),
   );
 
@@ -165,4 +180,37 @@ Future<void> setupDependencies() async {
 
   // Orders - Presentation
   sl.registerFactory<OrdersCubit>(() => OrdersCubit(sl<GetOrdersUseCase>()));
+
+  // Home - Presentation (بيعيد استخدام نفس use cases المنتجات/الطلبات/التصنيفات
+  // المسجلة فوق، مفيش endpoint مخصص للـ dashboard).
+  sl.registerFactory<HomeCubit>(
+    () => HomeCubit(
+      sl<GetProductsUseCase>(),
+      sl<GetOrdersUseCase>(),
+      sl<GetCategoriesUseCase>(),
+    ),
+  );
+
+  // Profile - Data
+  sl.registerLazySingleton<ProfileRemoteDataSource>(
+    () => ProfileRemoteDataSourceImpl(sl<ApiClient>()),
+  );
+
+  sl.registerLazySingleton<ProfileRepository>(
+    () => ProfileRepositoryImpl(sl<ProfileRemoteDataSource>()),
+  );
+
+  // Profile - Domain
+  sl.registerLazySingleton<GetProfileUseCase>(
+    () => GetProfileUseCase(sl<ProfileRepository>()),
+  );
+
+  sl.registerLazySingleton<UpdateProfileUseCase>(
+    () => UpdateProfileUseCase(sl<ProfileRepository>()),
+  );
+
+  // Profile - Presentation
+  sl.registerFactory<ProfileCubit>(
+    () => ProfileCubit(sl<GetProfileUseCase>(), sl<UpdateProfileUseCase>()),
+  );
 }

@@ -1,21 +1,47 @@
-import 'package:flutter/material.dart';
+import 'dart:io';
 
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:latlong2/latlong.dart';
+
+import '../../../../app/injection_container.dart';
 import '../../../auth/domain/entities/admin_entity.dart';
 import '../../../home/presentation/pages/home_page.dart';
 import '../../../orders/presentation/pages/orders_page.dart';
 import '../../../products/presentation/pages/products_page.dart';
+import '../../domain/usecases/update_profile_params.dart';
+import '../cubit/profile_cubit.dart';
+import '../cubit/profile_state.dart';
+import 'location_picker_page.dart';
 import 'profile_page.dart';
 
-class EditProfilePage extends StatefulWidget {
+class EditProfilePage extends StatelessWidget {
   const EditProfilePage({super.key, required this.admin});
 
   final AdminEntity admin;
 
   @override
-  State<EditProfilePage> createState() => _EditProfilePageState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => sl<ProfileCubit>(),
+      child: _EditProfileView(admin: admin),
+    );
+  }
 }
 
-class _EditProfilePageState extends State<EditProfilePage> {
+class _EditProfileView extends StatefulWidget {
+  const _EditProfileView({required this.admin});
+
+  final AdminEntity admin;
+
+  @override
+  State<_EditProfileView> createState() => _EditProfileViewState();
+}
+
+class _EditProfileViewState extends State<_EditProfileView> {
   static const Color _orange = Color(0xFFFF821D);
   static const Color _background = Color(0xFFF8F8FA);
   static const Color _fieldBackground = Color(0xFFF4F3F7);
@@ -23,6 +49,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   static const Color _textSecondary = Color(0xFF92939D);
 
   final _formKey = GlobalKey<FormState>();
+  final _imagePicker = ImagePicker();
 
   late final TextEditingController _nameController;
   late final TextEditingController _emailController;
@@ -30,12 +57,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
   late final TextEditingController _nationalIdController;
   late final TextEditingController _businessNameController;
   late final TextEditingController _addressController;
-  late final TextEditingController _latitudeController;
-  late final TextEditingController _longitudeController;
 
-  bool _commercialRegisterUploaded = false;
-  bool _taxCardUploaded = false;
-  bool _isSaving = false;
+  double? _latitude;
+  double? _longitude;
+  String? _locationAddress;
+  bool _isResolvingAddress = false;
+
+  PlatformFile? _commercialRegisterFile;
+  PlatformFile? _taxCardFile;
+  XFile? _selectedImage;
 
   @override
   void initState() {
@@ -53,53 +83,29 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _addressController = TextEditingController(
       text: widget.admin.address ?? '',
     );
-    _latitudeController = TextEditingController(
-      text: _coordinateText(widget.admin.latitude),
-    );
-    _longitudeController = TextEditingController(
-      text: _coordinateText(widget.admin.longitude),
-    );
 
-    _commercialRegisterUploaded =
-        widget.admin.commercialRegister != null &&
-        widget.admin.commercialRegister!.trim().isNotEmpty;
+    _latitude = widget.admin.latitude;
+    _longitude = widget.admin.longitude;
 
-    _taxCardUploaded =
-        widget.admin.taxCard != null && widget.admin.taxCard!.trim().isNotEmpty;
-
-    _latitudeController.addListener(_refreshLocationCard);
-    _longitudeController.addListener(_refreshLocationCard);
+    if (_latitude != null && _longitude != null) {
+      _resolveAddress(_latitude!, _longitude!);
+    }
   }
 
   @override
   void dispose() {
-    _latitudeController.removeListener(_refreshLocationCard);
-    _longitudeController.removeListener(_refreshLocationCard);
-
     _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
     _nationalIdController.dispose();
     _businessNameController.dispose();
     _addressController.dispose();
-    _latitudeController.dispose();
-    _longitudeController.dispose();
 
     super.dispose();
   }
 
-  void _refreshLocationCard() {
-    if (mounted) {
-      setState(() {});
-    }
-  }
-
-  String _coordinateText(double? value) {
-    if (value == null) {
-      return '';
-    }
-
-    return value.toString();
+  bool _hasValue(String? value) {
+    return value != null && value.trim().isNotEmpty;
   }
 
   String? _nullableText(String value) {
@@ -107,85 +113,120 @@ class _EditProfilePageState extends State<EditProfilePage> {
     return text.isEmpty ? null : text;
   }
 
-  double? _parseCoordinate(String value) {
-    final text = value.trim();
+  Future<void> _resolveAddress(double latitude, double longitude) async {
+    setState(() => _isResolvingAddress = true);
 
-    if (text.isEmpty) {
-      return null;
+    try {
+      final placemarks = await Geocoding().placemarkFromCoordinates(
+        latitude,
+        longitude,
+      );
+
+      if (!mounted) return;
+
+      if (placemarks.isNotEmpty) {
+        final place = placemarks.first;
+        final parts = [
+          place.street,
+          place.subLocality,
+          place.locality,
+          place.administrativeArea,
+          place.country,
+        ].where((part) => part != null && part.trim().isNotEmpty).toList();
+
+        setState(() {
+          _locationAddress = parts.isNotEmpty ? parts.join('، ') : null;
+          _isResolvingAddress = false;
+        });
+        return;
+      }
+    } catch (_) {
+      // نتجاهل خطأ تحويل الإحداثيات للعنوان ونعرض الإحداثيات كحل بديل فقط.
     }
 
-    return double.tryParse(text);
+    if (!mounted) return;
+    setState(() => _isResolvingAddress = false);
   }
 
-  bool _hasValidCoordinates() {
-    final latitudeText = _latitudeController.text.trim();
-    final longitudeText = _longitudeController.text.trim();
+  Future<void> _openLocationPicker() async {
+    final initialLocation = (_latitude != null && _longitude != null)
+        ? LatLng(_latitude!, _longitude!)
+        : null;
 
-    final latitude = _parseCoordinate(latitudeText);
-    final longitude = _parseCoordinate(longitudeText);
+    final result = await Navigator.of(context).push<PickedLocation>(
+      MaterialPageRoute(
+        builder: (_) => LocationPickerPage(initialLocation: initialLocation),
+      ),
+    );
 
-    if (latitudeText.isEmpty && longitudeText.isEmpty) {
-      return true;
-    }
+    if (result == null || !mounted) return;
 
-    if (latitude == null || longitude == null) {
-      return false;
-    }
-
-    return latitude >= -90 &&
-        latitude <= 90 &&
-        longitude >= -180 &&
-        longitude <= 180;
+    setState(() {
+      _latitude = result.latitude;
+      _longitude = result.longitude;
+      _locationAddress = result.address;
+    });
   }
 
-  Future<void> _saveChanges() async {
+  Future<void> _pickDocument({required bool isCommercialRegister}) async {
+    try {
+      final file = await FilePicker.pickFile(
+        type: FileType.custom,
+        // ملحوظة: السيرفر بيرفض PDF لحقلي السجل التجاري/البطاقة الضريبية
+        // وبيطلب صورة فقط (رسالة الخطأ: "must be an image ... jpeg, png,
+        // jpg, gif, webp, bmp") — لذلك شيلنا pdf من هنا عشان مايطلعشش المستخدم
+        // يختار ملف مستحيل يقبله السيرفر. لو عاوز تقبل PDF لازم تعديل قاعدة الـ
+        // validation في الـ Laravel backend (mimes:...,pdf) مش الـ Flutter.
+        allowedExtensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'],
+      );
+
+      if (file == null || !mounted || file.path == null) return;
+
+      setState(() {
+        if (isCommercialRegister) {
+          _commercialRegisterFile = file;
+        } else {
+          _taxCardFile = file;
+        }
+      });
+    } catch (_) {
+      if (!mounted) return;
+      _showSnackBar('Unable to pick this file.');
+    }
+  }
+
+  void _removeDocument({required bool isCommercialRegister}) {
+    setState(() {
+      if (isCommercialRegister) {
+        _commercialRegisterFile = null;
+      } else {
+        _taxCardFile = null;
+      }
+    });
+  }
+
+  void _saveChanges() {
     FocusScope.of(context).unfocus();
 
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    if (!_hasValidCoordinates()) {
-      _showSnackBar(
-        'Please enter valid latitude and longitude values, or leave both empty.',
-      );
-      return;
-    }
-
-    setState(() {
-      _isSaving = true;
-    });
-
-    await Future<void>.delayed(const Duration(milliseconds: 350));
-
-    final updatedAdmin = AdminEntity(
-      id: widget.admin.id,
-      name: _nameController.text.trim(),
-      email: _emailController.text.trim(),
-      phone: _phoneController.text.trim(),
-      nationalId: _nationalIdController.text.trim(),
-      businessName: _businessNameController.text.trim(),
-      address: _nullableText(_addressController.text),
-      latitude: _parseCoordinate(_latitudeController.text),
-      longitude: _parseCoordinate(_longitudeController.text),
-      commercialRegister: _commercialRegisterUploaded
-          ? (widget.admin.commercialRegister ?? 'commercial_register_uploaded')
-          : null,
-      taxCard: _taxCardUploaded
-          ? (widget.admin.taxCard ?? 'tax_card_uploaded')
-          : null,
-      picture: widget.admin.picture,
+    context.read<ProfileCubit>().updateProfile(
+      UpdateProfileParams(
+        name: _nameController.text.trim(),
+        email: _emailController.text.trim(),
+        phone: _phoneController.text.trim(),
+        nationalId: _nationalIdController.text.trim(),
+        businessName: _businessNameController.text.trim(),
+        address: _nullableText(_addressController.text),
+        latitude: _latitude,
+        longitude: _longitude,
+        picturePath: _selectedImage?.path,
+        commercialRegisterPath: _commercialRegisterFile?.path,
+        taxCardPath: _taxCardFile?.path,
+      ),
     );
-
-    if (!mounted) {
-      return;
-    }
-
-    setState(() {
-      _isSaving = false;
-    });
-
-    Navigator.of(context).pop(updatedAdmin);
   }
 
   void _showSnackBar(String message) {
@@ -194,37 +235,73 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 
-  void _showImagePickerMessage() {
-    _showSnackBar(
-      'Photo picker will be connected when we add image upload support.',
-    );
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final image = await _imagePicker.pickImage(
+        source: source,
+        imageQuality: 80,
+      );
+
+      if (image == null || !mounted) return;
+
+      setState(() => _selectedImage = image);
+    } catch (_) {
+      if (!mounted) return;
+      _showSnackBar('Unable to pick this image.');
+    }
   }
 
-  void _updateStoreLocation() {
-    _showSnackBar(
-      'Location picker will be connected later. You can enter latitude and longitude below.',
-    );
-  }
-
-  void _toggleCommercialRegister() {
-    setState(() {
-      _commercialRegisterUploaded = !_commercialRegisterUploaded;
-    });
-
-    _showSnackBar(
-      _commercialRegisterUploaded
-          ? 'Commercial Register selected.'
-          : 'Commercial Register removed.',
-    );
-  }
-
-  void _toggleTaxCard() {
-    setState(() {
-      _taxCardUploaded = !_taxCardUploaded;
-    });
-
-    _showSnackBar(
-      _taxCardUploaded ? 'Tax Card selected.' : 'Tax Card removed.',
+  void _showImageSourceSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+            child: Wrap(
+              children: [
+                const Center(
+                  child: Text(
+                    'Change profile photo',
+                    style: TextStyle(
+                      color: _textPrimary,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ListTile(
+                  leading: const Icon(
+                    Icons.photo_library_outlined,
+                    color: _orange,
+                  ),
+                  title: const Text('Choose from gallery'),
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    _pickImage(ImageSource.gallery);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(
+                    Icons.camera_alt_outlined,
+                    color: _orange,
+                  ),
+                  title: const Text('Take a photo'),
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    _pickImage(ImageSource.camera);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -258,6 +335,31 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    return BlocListener<ProfileCubit, ProfileState>(
+      listener: (context, state) {
+        if (state is ProfileUpdated) {
+          Navigator.of(context).pop(state.admin);
+          return;
+        }
+
+        if (state is ProfileUpdateFailure) {
+          // TEMP DEBUG: نطبع رسالة الخطأ في الـ console/logcat كمان تقدر تنسخها من هناك
+          // بدل ما توخذ سكرين شوت. ابحث عن السطر اللي فيه "SAVE_ERROR:".
+          debugPrint('SAVE_ERROR: ${state.message}');
+          _showSnackBar(state.message);
+        }
+      },
+      child: BlocBuilder<ProfileCubit, ProfileState>(
+        builder: (context, state) {
+          final isSaving = state is ProfileUpdating;
+
+          return _buildScaffold(isSaving: isSaving);
+        },
+      ),
+    );
+  }
+
+  Widget _buildScaffold({required bool isSaving}) {
     return Scaffold(
       backgroundColor: _background,
       appBar: AppBar(
@@ -266,7 +368,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
+          onPressed: isSaving ? null : () => Navigator.of(context).pop(),
           icon: const Icon(
             Icons.arrow_back_ios_new_rounded,
             color: _textPrimary,
@@ -375,59 +477,38 @@ class _EditProfilePageState extends State<EditProfilePage> {
               const SizedBox(height: 17),
               _buildLocationCard(),
               const SizedBox(height: 17),
-              _buildTextField(
-                controller: _latitudeController,
-                label: 'Latitude',
-                optional: true,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                  signed: true,
-                ),
-              ),
-              const SizedBox(height: 17),
-              _buildTextField(
-                controller: _longitudeController,
-                label: 'Longitude',
-                optional: true,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                  signed: true,
-                ),
-              ),
-              const SizedBox(height: 17),
               _buildDocumentField(
                 title: 'Commercial Register',
-                uploaded: _commercialRegisterUploaded,
-                uploadedText: 'Commercial Register uploaded',
-                uploadText: 'Upload Commercial Register',
-                onTap: _toggleCommercialRegister,
-                onRemove: _toggleCommercialRegister,
+                fileName: _commercialRegisterFile?.name,
+                hasExistingUpload: _hasValue(widget.admin.commercialRegister),
+                onTap: () => _pickDocument(isCommercialRegister: true),
+                onRemove: () => _removeDocument(isCommercialRegister: true),
               ),
               const SizedBox(height: 17),
               _buildDocumentField(
                 title: 'Tax Card',
-                uploaded: _taxCardUploaded,
-                uploadedText: 'Tax Card uploaded',
-                uploadText: 'Upload Tax Card',
-                onTap: _toggleTaxCard,
-                onRemove: _toggleTaxCard,
+                fileName: _taxCardFile?.name,
+                hasExistingUpload: _hasValue(widget.admin.taxCard),
+                onTap: () => _pickDocument(isCommercialRegister: false),
+                onRemove: () => _removeDocument(isCommercialRegister: false),
               ),
             ],
           ),
         ),
       ),
-      bottomNavigationBar: _buildBottomArea(),
+      bottomNavigationBar: _buildBottomArea(isSaving: isSaving),
     );
   }
 
   Widget _buildProfilePhoto() {
     final imageUrl = widget.admin.picture?.trim() ?? '';
     final hasImage = imageUrl.isNotEmpty;
+    final selectedImage = _selectedImage;
 
     return Column(
       children: [
         GestureDetector(
-          onTap: _showImagePickerMessage,
+          onTap: _showImageSourceSheet,
           child: Container(
             width: 78,
             height: 78,
@@ -437,7 +518,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
               border: Border.all(color: Colors.white, width: 3),
             ),
             clipBehavior: Clip.antiAlias,
-            child: hasImage
+            child: selectedImage != null
+                ? Image.file(
+                    File(selectedImage.path),
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => _photoPlaceholder(),
+                  )
+                : hasImage
                 ? Image.network(
                     imageUrl,
                     fit: BoxFit.cover,
@@ -448,7 +535,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         ),
         const SizedBox(height: 9),
         InkWell(
-          onTap: _showImagePickerMessage,
+          onTap: _showImageSourceSheet,
           borderRadius: BorderRadius.circular(8),
           child: const Padding(
             padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -559,10 +646,18 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }
 
   Widget _buildLocationCard() {
-    final latitude = _latitudeController.text.trim();
-    final longitude = _longitudeController.text.trim();
+    final hasLocation = _latitude != null && _longitude != null;
 
-    final hasLocation = latitude.isNotEmpty && longitude.isNotEmpty;
+    String subtitle;
+    if (_isResolvingAddress) {
+      subtitle = 'جارِ تحديد العنوان...';
+    } else if (hasLocation) {
+      subtitle =
+          _locationAddress ??
+          '${_latitude!.toStringAsFixed(5)}, ${_longitude!.toStringAsFixed(5)}';
+    } else {
+      subtitle = 'Tap to select store location on the map';
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -570,12 +665,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
         _buildFieldLabel(title: 'Store Location', optional: true),
         const SizedBox(height: 8),
         InkWell(
-          onTap: _updateStoreLocation,
+          onTap: _openLocationPicker,
           borderRadius: BorderRadius.circular(16),
           child: Container(
-            height: 50,
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
               color: const Color(0xFFFFF8F1),
               border: Border.all(color: const Color(0xFFFFD5B2), width: 1.5),
@@ -591,10 +685,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    hasLocation
-                        ? '$latitude, $longitude'
-                        : 'Tap to update store location',
-                    maxLines: 1,
+                    subtitle,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: _orange,
@@ -603,6 +695,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     ),
                   ),
                 ),
+                const SizedBox(width: 8),
+                const Icon(Icons.map_outlined, color: _orange, size: 19),
               ],
             ),
           ),
@@ -613,12 +707,20 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   Widget _buildDocumentField({
     required String title,
-    required bool uploaded,
-    required String uploadedText,
-    required String uploadText,
+    required String? fileName,
+    required bool hasExistingUpload,
     required VoidCallback onTap,
     required VoidCallback onRemove,
   }) {
+    final hasNewSelection = fileName != null;
+    final isUploaded = hasNewSelection || hasExistingUpload;
+
+    final label = hasNewSelection
+        ? fileName
+        : hasExistingUpload
+        ? '$title uploaded'
+        : 'Upload $title';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -632,32 +734,34 @@ class _EditProfilePageState extends State<EditProfilePage> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
-              color: uploaded ? const Color(0xFFFFFBF7) : _fieldBackground,
+              color: isUploaded ? const Color(0xFFFFFBF7) : _fieldBackground,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: uploaded ? _orange : const Color(0xFFD5D4DA),
-                width: uploaded ? 1.7 : 1.2,
+                color: isUploaded ? _orange : const Color(0xFFD5D4DA),
+                width: isUploaded ? 1.7 : 1.2,
               ),
             ),
             child: Row(
               children: [
                 Icon(
-                  uploaded ? Icons.check_rounded : Icons.file_upload_outlined,
-                  color: uploaded ? _orange : _textSecondary,
+                  isUploaded ? Icons.check_rounded : Icons.file_upload_outlined,
+                  color: isUploaded ? _orange : _textSecondary,
                   size: 20,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    uploaded ? uploadedText : uploadText,
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: uploaded ? _orange : _textSecondary,
+                      color: isUploaded ? _orange : _textSecondary,
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
-                if (uploaded)
+                if (hasNewSelection)
                   IconButton(
                     onPressed: onRemove,
                     icon: const Icon(
@@ -676,7 +780,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 
-  Widget _buildBottomArea() {
+  Widget _buildBottomArea({required bool isSaving}) {
     return SafeArea(
       top: false,
       child: Container(
@@ -693,7 +797,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 width: double.infinity,
                 height: 44,
                 child: ElevatedButton(
-                  onPressed: _isSaving ? null : _saveChanges,
+                  onPressed: isSaving ? null : _saveChanges,
                   style: ElevatedButton.styleFrom(
                     elevation: 0,
                     backgroundColor: _orange,
@@ -703,7 +807,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       borderRadius: BorderRadius.circular(18),
                     ),
                   ),
-                  child: _isSaving
+                  child: isSaving
                       ? const SizedBox(
                           width: 21,
                           height: 21,

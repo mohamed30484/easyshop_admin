@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../features/auth/presentation/cubit/auth_cubit.dart';
-import '../features/auth/presentation/pages/login/login_page.dart';
+import '../features/splash/presentation/pages/splash_page.dart';
 import 'app_theme.dart';
 import 'injection_container.dart';
 
@@ -17,7 +17,7 @@ class EasyShopAdminApp extends StatelessWidget {
         title: 'Easy Shop Merchant Portal',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
-        home: const LoginPage(),
+        home: const SplashPage(),
       ),
     );
   }

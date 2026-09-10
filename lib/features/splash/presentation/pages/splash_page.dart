@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../auth/presentation/pages/login/login_page.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -14,6 +15,7 @@ class SplashPage extends StatefulWidget {
 class _SplashPageState extends State<SplashPage> {
   int _activeDot = 0;
   Timer? _dotTimer;
+  Timer? _navigationTimer;
 
   @override
   void initState() {
@@ -26,11 +28,21 @@ class _SplashPageState extends State<SplashPage> {
         _activeDot = (_activeDot + 1) % 3;
       });
     });
+
+    // بعد فترة قصيرة بينتقل تلقائيًا لصفحة اللوجين ويمسح السبلاش من الـ stack.
+    _navigationTimer = Timer(const Duration(seconds: 2), () {
+      if (!mounted) return;
+
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+      );
+    });
   }
 
   @override
   void dispose() {
     _dotTimer?.cancel();
+    _navigationTimer?.cancel();
     super.dispose();
   }
 
